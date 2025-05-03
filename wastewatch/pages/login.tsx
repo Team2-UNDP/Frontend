@@ -4,7 +4,7 @@ import { useEffect } from "react";
 export default function Home() {
   useEffect(() => {
     const script = document.createElement("script");
-    script.src = "/js/LoginPage.js";
+    script.src = "/js/loginpage.js";
     script.async = true;
     document.body.appendChild(script);
     return () => {
