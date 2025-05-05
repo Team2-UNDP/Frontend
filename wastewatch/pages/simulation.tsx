@@ -1,0 +1,251 @@
+"use client";
+import React, { useRef, useState, useEffect } from "react";
+import Header from "@/components/header";
+import Image from "next/image";
+
+export default function Simulation() {
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [mapInstance, setMapInstance] = useState<any>(null);
+  const [coordinatesList, setCoordinatesList] = useState<[number, number][]>(
+    []
+  );
+  const [selectedDays, setSelectedDays] = useState<number | null>(null);
+  const markerRefs = useRef<any[]>([]);
+  const mapRef = useRef<HTMLDivElement>(null);
+
+  const closeModal = () => setModalOpen(false);
+  const toggleDropdown = () => setDropdownOpen(!dropdownOpen);
+  const openModal = () => setModalOpen(true);
+
+  const [historyVisible, setHistoryVisible] = useState(false);
+
+  useEffect(() => {
+    import("leaflet/dist/leaflet.css");
+
+    if (!mapRef.current || mapInstance) return;
+
+    const waitForMapResize = (map: any, attempts = 10) => {
+      if (attempts <= 0) return;
+      requestAnimationFrame(() => {
+        if (mapRef.current?.clientWidth && mapRef.current?.clientHeight) {
+          map.invalidateSize();
+        } else {
+          waitForMapResize(map, attempts - 1);
+        }
+      });
+    };
+
+    (async () => {
+      const map = await initializeLeafletMap(mapRef.current!, (lat, lng) => {
+        setCoordinatesList((prev) => [...prev, [lat, lng]]);
+      });
+
+      setMapInstance(map);
+      waitForMapResize(map);
+    })();
+  }, [mapRef, mapInstance]);
+
+  const simulatePaths = () => {
+    if (!mapInstance || coordinatesList.length === 0 || selectedDays === null) {
+      alert("Please select coordinates and a day value before simulating.");
+      return;
+    }
+
+    coordinatesList.forEach(([lat, lng]) => {
+      drawPath(mapInstance, lat, lng, generateDummyPath);
+    });
+  };
+
+  function generateDummyPath(lat: number, lng: number): [number, number][] {
+    const path: [number, number][] = [];
+    for (let i = 0; i < 5; i++) {
+      lat += (Math.random() - 0.5) * 0.01;
+      lng += (Math.random() - 0.5) * 0.01;
+      path.push([lat, lng]);
+    }
+    return path;
+  }
+
+  async function initializeLeafletMap(
+    container: HTMLDivElement,
+    onClickCallback: (lat: number, lng: number) => void
+  ) {
+    const L = await import("leaflet");
+    const map = L.map(container).setView([7.0806, 125.6476], 10);
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: "&copy; OpenStreetMap contributors",
+    }).addTo(map);
+
+    map.on("click", (e: any) => {
+      const { lat, lng } = e.latlng;
+      onClickCallback(lat, lng);
+
+      const customIcon = L.icon({
+        iconUrl: "/icons/Coordinate.png",
+        iconSize: [16, 18],
+        iconAnchor: [16, 32],
+        popupAnchor: [0, -32],
+      });
+
+      L.marker([lat, lng], { icon: customIcon }).addTo(map);
+    });
+
+    return map;
+  }
+
+  function drawPath(
+    map: any,
+    lat: number,
+    lng: number,
+    generatePath: (lat: number, lng: number) => [number, number][]
+  ) {
+    const L = require("leaflet");
+    const pathCoords = generatePath(lat, lng);
+    const latLngs = pathCoords.map(([lat, lng]) => [lat, lng]);
+    map.fitBounds(latLngs);
+    L.polyline(latLngs, { color: "blue" }).addTo(map);
+  }
+
+  const toggleHistory = () => {
+    setHistoryVisible(!historyVisible);
+  };
+
+  return (
+    <div className="font-poppins bg-gradient-to-br from-[#065C7C] to-[#0C2E3F] min-h-screen">
+      <Header />
+      <title>WasteWatch Simulation</title>
+      <div className="p-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="col-span-2 rounded-xl p-4 relative">
+          <h2 className="text-white text-3xl font-bold mb-4">Map Overview</h2>
+          <div className="relative h-[500px] overflow-hidden rounded-3xl border-2 border-[#ACDCFF]">
+            <div
+              ref={mapRef}
+              id="map"
+              className="absolute inset-0 w-full h-full z-10"
+            />
+          </div>
+        </div>
+
+        <aside className="space-y-6">
+          <section className="bg-transparent text-white p-4 rounded-xl border border-solid border-white mt-16">
+            <div className="flex-1 justify-between items-center relative">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-bold">Simulate Trash Path</h3>
+                <button
+                  onClick={toggleHistory}
+                  className="cursor-pointer p-1.5 hover:bg-[#065C7C] rounded-full transition duration-150"
+                >
+                  <Image
+                    src="/icons/History.png"
+                    alt="History"
+                    width={24}
+                    height={24}
+                  />
+                </button>
+              </div>
+              <div className="space-y-2 max-h-[500px] overflow-y-auto custom-scroll">
+                <div className="flex items-center">
+                  <label className="block mb-1 text-white">Days:</label>
+                  <div className="relative ml-2">
+                    <select
+                      id="daySelector"
+                      value={selectedDays || ""}
+                      onChange={(e) => setSelectedDays(Number(e.target.value))}
+                      className="appearance-none w-fit bg-white/10 text-white py-1 pr-20 px-2 rounded-md border border-white"
+                    >
+                      <option value="1" className="text-black">
+                        1 day
+                      </option>
+                      <option value="3" className="text-black">
+                        3 days
+                      </option>
+                      <option value="7" className="text-black">
+                        7 days
+                      </option>
+                    </select>
+
+                    <Image
+                      src="/icons/Dropdown.png"
+                      alt="Dropdown"
+                      className="w-4 h-4 absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none"
+                      width="24"
+                      height="24"
+                    />
+                  </div>
+                </div>
+                {coordinatesList.length === 0 && (
+                  <p className="text-sm text-gray-300">
+                    No coordinates selected.
+                  </p>
+                )}
+                {coordinatesList.map(([lat, lng], idx) => (
+                  <div
+                    key={idx}
+                    className="bg-white text-black text-sm rounded-lg px-3 py-2 shadow"
+                  >
+                    <strong>Coordinate {idx + 1}:</strong> {lat.toFixed(5)},{" "}
+                    {lng.toFixed(5)}
+                  </div>
+                ))}
+              </div>
+              <div className="flex justify-center mt-4">
+                <button
+                  type="button"
+                  onClick={simulatePaths}
+                  className={`bg-[#174D6A] border border-white px-6 py-1 rounded-full text-white w-fit ${
+                    coordinatesList.length > 0 && selectedDays
+                      ? "hover:bg-[#016b87] cursor-pointer"
+                      : "cursor-not-allowed opacity-50"
+                  }`}
+                  disabled={
+                    coordinatesList.length === 0 || selectedDays === null
+                  }
+                >
+                  Start Simulating
+                </button>
+              </div>
+            </div>
+          </section>
+          {historyVisible && (
+            <div
+              id="historyModal"
+              className="fixed inset-0 flex items-center justify-center bg-black/50 z-50"
+            >
+              <div className="bg-white rounded-xl p-6 max-w-2xl w-full overflow-y-auto max-h-[80vh]">
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-xl font-bold text-black">History</h2>
+                  <button
+                    id="closeModalBtn"
+                    onClick={toggleHistory}
+                    className="cursor-pointer p-1.5 hover:bg-gray-200 rounded-full transition duration-150"
+                  >
+                    <Image
+                      src="/icons/Close.png"
+                      alt="Close"
+                      width={12}
+                      height={12}
+                    />
+                  </button>
+                </div>
+                <div className="space-y-4">
+                  {coordinatesList.length === 0 ? (
+                    <p>No history available.</p>
+                  ) : (
+                    coordinatesList.map(([lat, lng], idx) => (
+                      <div key={idx} className="rounded-xl p-4 shadow border">
+                        <strong>Coordinate {idx + 1}:</strong> {lat.toFixed(5)},{" "}
+                        {lng.toFixed(5)}
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </aside>
+      </div>
+    </div>
+  );
+}
