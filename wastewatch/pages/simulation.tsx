@@ -1,7 +1,9 @@
+"use client";
 import React, { useRef, useState, useEffect } from "react";
 import Header from "@/components/header";
 import Image from "next/image";
-import L from "leaflet";
+
+// Do NOT import Leaflet at the top level
 
 export default function Simulation() {
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -11,7 +13,6 @@ export default function Simulation() {
     []
   );
   const [selectedDays, setSelectedDays] = useState<number | null>(null);
-  const markerRefs = useRef<any[]>([]);
   const mapRef = useRef<HTMLDivElement>(null);
   const [historyVisible, setHistoryVisible] = useState(false);
 
@@ -20,39 +21,60 @@ export default function Simulation() {
   };
 
   useEffect(() => {
-    import("leaflet/dist/leaflet.css");
+    // Ensure we're in the browser
+    if (typeof window === "undefined" || !mapRef.current || mapInstance) return;
 
-    if (!mapRef.current || mapInstance) return;
+    const loadMap = async () => {
+      const L = (await import("leaflet")).default;
+      await import("leaflet/dist/leaflet.css");
 
-    const waitForMapResize = (map: any, attempts = 10) => {
-      if (attempts <= 0) return;
-      requestAnimationFrame(() => {
-        if (mapRef.current?.clientWidth && mapRef.current?.clientHeight) {
-          map.invalidateSize();
-        } else {
-          waitForMapResize(map, attempts - 1);
-        }
+      if (!mapRef.current) return;
+      const map = L.map(mapRef.current as HTMLElement).setView(
+        [7.0806, 125.6476],
+        10
+      );
+
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: "&copy; OpenStreetMap contributors",
+      }).addTo(map);
+
+      map.on("click", (e: any) => {
+        const { lat, lng } = e.latlng;
+        setCoordinatesList((prev) => [...prev, [lat, lng]]);
+
+        const customIcon = L.icon({
+          iconUrl: "/icons/Coordinate.png",
+          iconSize: [16, 18],
+          iconAnchor: [16, 32],
+          popupAnchor: [0, -32],
+        });
+
+        L.marker([lat, lng], { icon: customIcon }).addTo(map);
       });
+
+      requestAnimationFrame(() => map.invalidateSize());
+      setMapInstance(map);
     };
 
-    (async () => {
-      const map = await initializeLeafletMap(mapRef.current!, (lat, lng) => {
-        setCoordinatesList((prev) => [...prev, [lat, lng]]);
-      });
-
-      setMapInstance(map);
-      waitForMapResize(map);
-    })();
+    loadMap();
   }, [mapRef, mapInstance]);
 
-  const simulatePaths = () => {
+  const simulatePaths = async () => {
     if (!mapInstance || coordinatesList.length === 0 || selectedDays === null) {
       alert("Please select coordinates and a day value before simulating.");
       return;
     }
 
+    const L = (await import("leaflet")).default;
+
     coordinatesList.forEach(([lat, lng]) => {
-      drawPath(mapInstance, lat, lng, generateDummyPath);
+      const pathCoords = generateDummyPath(lat, lng);
+      const latLngs: [number, number][] = pathCoords.map(([lat, lng]) => [
+        lat,
+        lng,
+      ]);
+      mapInstance.fitBounds(latLngs);
+      L.polyline(latLngs, { color: "blue" }).addTo(mapInstance);
     });
   };
 
@@ -66,62 +88,20 @@ export default function Simulation() {
     return path;
   }
 
-  async function initializeLeafletMap(
-    container: HTMLDivElement,
-    onClickCallback: (lat: number, lng: number) => void
-  ) {
-    const L = await import("leaflet");
-    const map = L.map(container).setView([7.0806, 125.6476], 10);
-
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      attribution: "&copy; OpenStreetMap contributors",
-    }).addTo(map);
-
-    map.on("click", (e: any) => {
-      const { lat, lng } = e.latlng;
-      onClickCallback(lat, lng);
-
-      const customIcon = L.icon({
-        iconUrl: "/icons/Coordinate.png",
-        iconSize: [16, 18],
-        iconAnchor: [16, 32],
-        popupAnchor: [0, -32],
-      });
-
-      L.marker([lat, lng], { icon: customIcon }).addTo(map);
-    });
-
-    return map;
-  }
-
-  function drawPath(
-    map: any,
-    lat: number,
-    lng: number,
-    generatePath: (lat: number, lng: number) => [number, number][]
-  ) {
-    const L = require("leaflet");
-    const pathCoords = generatePath(lat, lng);
-    const latLngs = pathCoords.map(([lat, lng]) => [lat, lng]);
-    map.fitBounds(latLngs);
-    L.polyline(latLngs, { color: "blue" }).addTo(map);
-  }
-
-  // Reset function to clear coordinates and map markers
   const resetSimulation = () => {
     setCoordinatesList([]);
     if (mapInstance) {
-      mapInstance.eachLayer((layer: any) => {
-        if (layer instanceof L.Marker) {
+      mapInstance.eachLayer(async (layer: any) => {
+        const L = (await import("leaflet")).default;
+        if (layer instanceof L.Marker || layer instanceof L.Polyline) {
           mapInstance.removeLayer(layer);
         }
       });
     }
-    setSelectedDays(null); // Optionally reset the selected days
-    setHistoryVisible(false); // Optionally close the history modal
+    setSelectedDays(null);
+    setHistoryVisible(false);
   };
 
-  // Get the current date and time
   const now = new Date();
   const dateStr = now.toLocaleDateString("en-GB");
   const timeStr = now.toLocaleTimeString([], {
@@ -129,7 +109,6 @@ export default function Simulation() {
     minute: "2-digit",
   });
 
-  // Generate the coordinate string
   const coordStr = coordinatesList
     .map(([lat, lng]) => `${lat.toFixed(4)}, ${lng.toFixed(4)}`)
     .join("; ");
