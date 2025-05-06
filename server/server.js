@@ -20,16 +20,22 @@ app.use(bodyParser.json());
 // Serve static files from the public directory
 app.use(express.static(path.join(__dirname, "public")));
 
-// Other routes
+// Serve a custom login
+server.get("/", (req, res) => {
+  return app.render(req, res, "/login");
+});
+
+// Serve the homepage
 app.get("/homepage", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "homepage.html"));
+  res.sendFile(path.join(__dirname, "public", "homepage"));
 });
 
+// Serve simulation page
 app.get("/simulation", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "simulation.html"));
+  res.sendFile(path.join(__dirname, "public", "simulation"));
 });
 
-// Login endpoint
+// Login endpoint (if you still want to keep the login logic)
 app.post("/login", async (req, res) => {
   const { username, password } = req.body;
 
