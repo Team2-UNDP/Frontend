@@ -4,7 +4,7 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 This project uses the following frontend technologies and tools:
 
-- **Framework**: [Next.js](https://nextjs.org) – React-based framework for server-rendered and statically-generated web apps.
+- **Framework**: [Next.js](https://nextjs.org) – React-based framework for server-rendered and statically-generated web apps. **Node.js** – JavaScript runtime environment for running the development server and build tools.
 - **Language**: TypeScript – Strongly typed JavaScript for better developer tooling.
 - **Styling**:
   - [Tailwind CSS](https://tailwindcss.com) – Utility-first CSS framework.
