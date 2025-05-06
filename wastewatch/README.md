@@ -1,5 +1,32 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/pages/api-reference/create-next-app).
 
+## Frontend Setup
+
+This project uses the following frontend technologies and tools:
+
+- **Framework**: [Next.js](https://nextjs.org) – React-based framework for server-rendered and statically-generated web apps.
+- **Language**: TypeScript – Strongly typed JavaScript for better developer tooling.
+- **Styling**:
+  - [Tailwind CSS](https://tailwindcss.com) – Utility-first CSS framework.
+  - [ShadCN UI](https://ui.shadcn.dev) – Accessible components built with Tailwind CSS.
+- **Fonts**: [next/font](https://nextjs.org/docs/pages/building-your-application/optimizing/fonts) for optimized loading of [Geist](https://vercel.com/font).
+- **Mapping Library**: [Leaflet](https://leafletjs.com) – JavaScript library for interactive maps.
+- **Package Manager**: Supports `npm`, `yarn`, `pnpm`, or `bun`.
+
+## Getting Started
+
+First, run the development server:
+
+````bash
+npm run dev
+# or
+yarn dev
+# or
+pnpm dev
+# or
+bun dev
+
+
 ## Getting Started
 
 First, run the development server:
@@ -12,7 +39,7 @@ yarn dev
 pnpm dev
 # or
 bun dev
-```
+````
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
