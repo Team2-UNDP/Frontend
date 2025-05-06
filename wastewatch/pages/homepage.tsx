@@ -1,8 +1,15 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import Header from "@/components/header";
 
 export default function WasteWatchDashboard() {
+  const [mapInstance, setMapInstance] = useState<any>(null);
+  const [coordinatesList, setCoordinatesList] = useState<[number, number][]>(
+    []
+  );
+  const [selectedDays, setSelectedDays] = useState<number | null>(null);
+  const mapRef = useRef<HTMLDivElement>(null);
+  const [historyVisible, setHistoryVisible] = useState(false);
   const [showModal, setShowModal] = useState(false);
 
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -12,6 +19,52 @@ export default function WasteWatchDashboard() {
   const openModal = () => setModalOpen(true);
   const closeModal = () => setModalOpen(false);
 
+  useEffect(() => {
+    // Ensure we're in the browser
+    if (typeof window === "undefined" || !mapRef.current) return;
+
+    const loadMap = async () => {
+      const L = (await import("leaflet")).default;
+      await import("leaflet/dist/leaflet.css");
+
+      // Fix: Destroy existing map instance if already initialized
+      if (mapRef.current && (mapRef.current as any)._leaflet_id != null) {
+        return; // Map already initialized
+      }
+
+      const map = L.map(mapRef.current as HTMLElement).setView(
+        [7.0806, 125.6476],
+        10
+      );
+
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: "&copy; OpenStreetMap contributors",
+      }).addTo(map);
+
+      map.on("click", (e: any) => {
+        const { lat, lng } = e.latlng;
+        setCoordinatesList((prev) => [...prev, [lat, lng]]);
+
+        const customIcon = L.icon({
+          iconUrl: "/icons/Coordinate.png",
+          iconSize: [16, 18],
+          iconAnchor: [16, 32],
+          popupAnchor: [0, -32],
+        });
+
+        L.marker([lat, lng], { icon: customIcon }).addTo(map);
+      });
+
+      requestAnimationFrame(() => map.invalidateSize());
+      setMapInstance(map);
+    };
+
+    // Run loadMap only if map is not yet initialized
+    if (!mapInstance) {
+      loadMap();
+    }
+  }, [mapRef, mapInstance]);
+
   return (
     <div className="font-poppins bg-gradient-to-br from-[#065C7C] to-[#0C2E3F] min-h-screen">
       <Header />
@@ -20,22 +73,22 @@ export default function WasteWatchDashboard() {
         <section className="col-span-2 rounded-xl p-4 relative">
           <h2 className="text-white text-3xl font-bold mb-4">Map Overview</h2>
           <div className="relative overflow-hidden rounded-3xl border-2 border-solid border-[#ACDCFF]">
-            <Image
-              src="/images/Map.png"
-              alt="Map"
-              width={1200}
-              height={600}
-              className="w-full max-h-[600px] object-fill"
-            />
+            <div className="relative h-[500px] overflow-hidden rounded-3xl border-2 border-[#ACDCFF]">
+              <div
+                ref={mapRef}
+                id="map"
+                className="absolute inset-0 w-full h-full z-10"
+              />
+            </div>
             <Image
               src="/icons/Drone1.png"
               alt="Drone"
               width={32}
               height={24}
-              className="absolute top-[40%] left-[45%]"
+              className="absolute top-[40%] left-[45%] z-50"
             />
 
-            <div className="absolute top-[40%] left-[50%] w-fit group">
+            <div className="absolute top-[40%] left-[50%] w-fit group z-50">
               <Image
                 src="/icons/Active.png"
                 alt="Active Buoy"
@@ -127,11 +180,11 @@ export default function WasteWatchDashboard() {
               alt="Inactive Buoy"
               width={32}
               height={32}
-              className="absolute top-[60%] left-[40%]"
+              className="absolute top-[60%] left-[40%] z-50"
             />
 
             {/* Legends */}
-            <div className="absolute bottom-4 left-4 bg-white rounded-md px-3 py-2 text-sm text-black shadow">
+            <div className="absolute bottom-4 left-4 bg-white rounded-md px-3 py-2 text-sm text-black shadow z-50">
               <p className="font-bold mb-1">Legends</p>
               <span className="block w-32 h-[1px] bg-[#ADADAD] mt-1"></span>
               <ul>

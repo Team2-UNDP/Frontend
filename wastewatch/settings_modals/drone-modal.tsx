@@ -21,7 +21,7 @@ export default function DroneModal({
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 p-1.5 hover:bg-gray-200 rounded-full transition duration-150"
+          className="absolute top-4 right-4 p-1.5 hover:bg-gray-200 rounded-full transition duration-150 cursor-pointer"
         >
           <Image src="/icons/Close.png" alt="Close" width={12} height={12} />
         </button>

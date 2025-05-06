@@ -1,23 +1,17 @@
 import Head from "next/head";
-import { useEffect } from "react";
+import { useState } from "react";
 
 export default function Home() {
-  useEffect(() => {
-    const script = document.createElement("script");
-    script.src = "/js/loginpage.js";
-    script.async = true;
-    document.body.appendChild(script);
-    return () => {
-      document.body.removeChild(script);
-    };
-  }, []);
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const toggleLoginForm = () => {
+    setIsModalOpen((prevState) => !prevState);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const username = (document.getElementById("username") as HTMLInputElement)
-      ?.value;
-    const password = (document.getElementById("password") as HTMLInputElement)
-      ?.value;
 
     try {
       const res = await fetch("http://localhost:5000/login", {
@@ -32,7 +26,6 @@ export default function Home() {
 
       if (res.ok) {
         localStorage.setItem("token", data.token);
-
         alert("Login successful!");
       } else {
         alert(data.message || "Login failed.");
@@ -48,6 +41,7 @@ export default function Home() {
       <Head>
         <title>WasteWatch Login</title>
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <script src="https://cdn.tailwindcss.com"></script>
       </Head>
       <main className="font-poppins min-h-screen flex items-center justify-center text-white bg-[url('/images/bg-image.png')] bg-[length:100%_100%] bg-no-repeat bg-center">
         <div className="text-center mt-16">
@@ -55,12 +49,14 @@ export default function Home() {
             id="logo"
             src="/images/WebLogo.png"
             alt="WasteWatch Logo"
-            className="mx-auto mb-12"
+            className={`mx-auto mb-12 ${isModalOpen ? "logo-shrink" : ""}`}
           />
           <button
             id="loginBtn"
-            onClick={() => window.toggleLoginForm()}
-            className="mt-16 px-16 py-2 border border-white rounded-full bg-transparent backdrop-blur-lg hover:bg-white hover:text-blue-900 transition duration-300 text-xl font-light"
+            onClick={toggleLoginForm}
+            className={`mt-16 px-16 py-2 border border-white rounded-full bg-transparent backdrop-blur-lg hover:bg-white hover:text-blue-900 transition duration-300 text-xl font-light ${
+              isModalOpen ? "hidden" : ""
+            }`}
           >
             Login
           </button>
@@ -68,11 +64,15 @@ export default function Home() {
 
         <div
           id="loginForm"
-          className="fixed bg-opacity-50 flex items-center justify-center hidden"
+          className={`fixed bg-opacity-50 flex items-center justify-center ${
+            isModalOpen
+              ? "block modal-enter modal-enter-active"
+              : "hidden modal-exit"
+          }`}
         >
           <div className="text-white p-8 rounded-lg shadow-lg w-96 relative bg-gradient-to-bl from-[rgba(146,240,255,0.2)] to-[rgba(2,36,50,0.2)] border border-[#ACDCFF] backdrop-blur-sm">
             <button
-              onClick={() => window.toggleLoginForm()}
+              onClick={toggleLoginForm}
               className="absolute top-2 right-4 text-white hover:text-gray-300 text-xl"
             >
               &times;
@@ -90,6 +90,8 @@ export default function Home() {
                 <input
                   type="text"
                   id="username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
                   className="w-full pl-12 pr-4 py-2 border border-white rounded-full text-[#E1E6E8] placeholder-[#E1E6E8] bg-transparent placeholder-opacity-75 focus:outline-none focus:ring-2 focus:ring-[#FFFFFF]"
                   required
                   placeholder="Username"
@@ -105,6 +107,8 @@ export default function Home() {
                 <input
                   type="password"
                   id="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                   className="w-full pl-12 pr-4 py-2 border border-white rounded-full text-[#E1E6E8] placeholder-[#E1E6E8] bg-transparent placeholder-opacity-75 focus:outline-none focus:ring-2 focus:ring-[#FFFFFF]"
                   required
                   placeholder="Password"
@@ -123,10 +127,4 @@ export default function Home() {
       </main>
     </>
   );
-}
-
-declare global {
-  interface Window {
-    toggleLoginForm: () => void;
-  }
 }

@@ -3,8 +3,6 @@ import React, { useRef, useState, useEffect } from "react";
 import Header from "@/components/header";
 import Image from "next/image";
 
-// Do NOT import Leaflet at the top level
-
 export default function Simulation() {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
@@ -12,23 +10,25 @@ export default function Simulation() {
   const [coordinatesList, setCoordinatesList] = useState<[number, number][]>(
     []
   );
+  const [historyList, setHistoryList] = useState<[number, number][]>([]);
   const [selectedDays, setSelectedDays] = useState<number | null>(null);
-  const mapRef = useRef<HTMLDivElement>(null);
+  const [hasSimulated, setHasSimulated] = useState(false);
   const [historyVisible, setHistoryVisible] = useState(false);
-
-  const toggleHistory = () => {
-    setHistoryVisible(!historyVisible);
-  };
+  const mapRef = useRef<HTMLDivElement>(null);
+  const [pathsList, setPathsList] = useState<Map<string, [number, number][]>>(
+    new Map()
+  );
+  const toggleHistory = () => setHistoryVisible(!historyVisible);
 
   useEffect(() => {
-    // Ensure we're in the browser
     if (typeof window === "undefined" || !mapRef.current || mapInstance) return;
 
     const loadMap = async () => {
       const L = (await import("leaflet")).default;
       await import("leaflet/dist/leaflet.css");
 
-      if (!mapRef.current) return;
+      if ((mapRef.current as any)._leaflet_id != null) return;
+
       const map = L.map(mapRef.current as HTMLElement).setView(
         [7.0806, 125.6476],
         10
@@ -41,6 +41,7 @@ export default function Simulation() {
       map.on("click", (e: any) => {
         const { lat, lng } = e.latlng;
         setCoordinatesList((prev) => [...prev, [lat, lng]]);
+        setHistoryList((prev) => [...prev, [lat, lng]]);
 
         const customIcon = L.icon({
           iconUrl: "/icons/Coordinate.png",
@@ -60,22 +61,40 @@ export default function Simulation() {
   }, [mapRef, mapInstance]);
 
   const simulatePaths = async () => {
-    if (!mapInstance || coordinatesList.length === 0 || selectedDays === null) {
-      alert("Please select coordinates and a day value before simulating.");
+    if (
+      !mapInstance ||
+      coordinatesList.length === 0 ||
+      selectedDays === null ||
+      hasSimulated
+    ) {
+      if (hasSimulated) alert("Simulation already started.");
+      else
+        alert("Please select coordinates and a day value before simulating.");
       return;
     }
 
     const L = (await import("leaflet")).default;
 
-    coordinatesList.forEach(([lat, lng]) => {
+    // Iterate over coordinates and generate paths
+    const newPathsList = new Map(pathsList); // To maintain previous paths if any
+
+    coordinatesList.forEach(([lat, lng], idx) => {
       const pathCoords = generateDummyPath(lat, lng);
       const latLngs: [number, number][] = pathCoords.map(([lat, lng]) => [
         lat,
         lng,
       ]);
-      mapInstance.fitBounds(latLngs);
+
+      // Store path for the current coordinate
+      newPathsList.set(`${lat},${lng}`, latLngs);
+
+      // Draw path immediately for simulation
       L.polyline(latLngs, { color: "blue" }).addTo(mapInstance);
     });
+
+    // Update state with new paths
+    setPathsList(newPathsList);
+    setHasSimulated(true);
   };
 
   function generateDummyPath(lat: number, lng: number): [number, number][] {
@@ -90,6 +109,10 @@ export default function Simulation() {
 
   const resetSimulation = () => {
     setCoordinatesList([]);
+    setHasSimulated(false);
+    setSelectedDays(null);
+    setHistoryVisible(false);
+
     if (mapInstance) {
       mapInstance.eachLayer(async (layer: any) => {
         const L = (await import("leaflet")).default;
@@ -98,8 +121,45 @@ export default function Simulation() {
         }
       });
     }
-    setSelectedDays(null);
-    setHistoryVisible(false);
+  };
+
+  const showHistoryOnMap = async () => {
+    if (!mapInstance || historyList.length === 0) return;
+
+    const L = (await import("leaflet")).default;
+
+    // Clear existing markers and polylines
+    mapInstance.eachLayer((layer: any) => {
+      if (layer instanceof L.Marker || layer instanceof L.Polyline) {
+        mapInstance.removeLayer(layer);
+      }
+    });
+
+    // Add markers and draw paths from the stored paths in pathsList
+    historyList.forEach(([lat, lng], index) => {
+      // Create a marker for each coordinate
+      const customIcon = L.icon({
+        iconUrl: "/icons/Coordinate.png",
+        iconSize: [16, 18],
+        iconAnchor: [16, 32],
+        popupAnchor: [0, -32],
+      });
+
+      const marker = L.marker([lat, lng], { icon: customIcon }).addTo(
+        mapInstance
+      );
+
+      // Get the stored path for the current coordinate
+      const pathSegment = pathsList.get(`${lat},${lng}`);
+
+      if (pathSegment) {
+        // Draw the original path
+        L.polyline(pathSegment, { color: "blue" }).addTo(mapInstance);
+      }
+    });
+
+    // Restore coordinates list for continued simulation
+    setCoordinatesList(historyList);
   };
 
   const now = new Date();
@@ -109,7 +169,7 @@ export default function Simulation() {
     minute: "2-digit",
   });
 
-  const coordStr = coordinatesList
+  const coordStr = historyList
     .map(([lat, lng]) => `${lat.toFixed(4)}, ${lng.toFixed(4)}`)
     .join("; ");
 
@@ -119,7 +179,9 @@ export default function Simulation() {
       <title>WasteWatch Simulation</title>
       <div className="p-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="col-span-2 rounded-xl p-4 relative">
-          <h2 className="text-white text-3xl font-bold mb-4">Map Overview</h2>
+          <h2 className="text-white text-3xl font-bold mb-4">
+            Trash Path Map Simulation
+          </h2>
           <div className="relative h-[500px] overflow-hidden rounded-3xl border-2 border-[#ACDCFF]">
             <div
               ref={mapRef}
@@ -156,6 +218,9 @@ export default function Simulation() {
                       onChange={(e) => setSelectedDays(Number(e.target.value))}
                       className="appearance-none w-fit bg-white/10 text-white py-1 pr-20 px-2 rounded-md border border-white"
                     >
+                      <option value="" disabled hidden>
+                        Select Days
+                      </option>
                       <option value="1" className="text-black">
                         1 day
                       </option>
@@ -166,16 +231,16 @@ export default function Simulation() {
                         7 days
                       </option>
                     </select>
-
                     <Image
                       src="/icons/Dropdown.png"
                       alt="Dropdown"
                       className="w-4 h-4 absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none"
-                      width="24"
-                      height="24"
+                      width={24}
+                      height={24}
                     />
                   </div>
                 </div>
+
                 {coordinatesList.length === 0 && (
                   <p className="text-sm text-gray-300">
                     No coordinates selected.
@@ -191,6 +256,7 @@ export default function Simulation() {
                   </div>
                 ))}
               </div>
+
               <div className="flex justify-center mt-4">
                 <button
                   type="button"
@@ -207,12 +273,12 @@ export default function Simulation() {
                   Start Simulating
                 </button>
               </div>
-              {/* Reset Button */}
+
               <div className="flex justify-center mt-4">
                 <button
                   type="button"
                   onClick={resetSimulation}
-                  className="bg-red-600 border border-white px-6 py-1 rounded-full text-white hover:bg-red-500"
+                  className="bg-red-600 border border-white px-6 py-1 rounded-full text-white hover:bg-red-500 cursor-pointer"
                 >
                   Reset Simulation
                 </button>
@@ -239,24 +305,21 @@ export default function Simulation() {
                 />
               </button>
             </div>
-            <div className="space-y-4">
-              {coordinatesList.length === 0 ? (
-                <p>No coordinates selected yet.</p>
-              ) : (
-                <div className="rounded-xl p-4 shadow-[0px_0px_10px_rgba(0,0,0,0.4)] space-y-1">
-                  <div className="flex justify-between items-center">
-                    <p className="font-semibold">{dateStr}</p>
-                    <span className="text-sm">{timeStr}</span>
-                  </div>
-                  <p className="text-sm text-gray-700">
-                    {coordinatesList.length} coordinate
-                    {coordinatesList.length > 1 ? "s" : ""} selected
-                  </p>
-                  <p className="text-sm">
-                    <span className="font-bold">Coordinates:</span> {coordStr}
-                  </p>
-                </div>
-              )}
+            <div
+              className="rounded-xl p-4 shadow-[0px_0px_10px_rgba(0,0,0,0.4)] space-y-1 cursor-pointer hover:bg-gray-100 transition"
+              onClick={showHistoryOnMap}
+            >
+              <div className="flex justify-between items-center">
+                <p className="font-semibold">{dateStr}</p>
+                <span className="text-sm">{timeStr}</span>
+              </div>
+              <p className="text-sm text-gray-700">
+                {historyList.length} coordinate
+                {historyList.length > 1 ? "s" : ""} selected
+              </p>
+              <p className="text-sm">
+                <span className="font-bold">Coordinates:</span> {coordStr}
+              </p>
             </div>
           </div>
         </div>
