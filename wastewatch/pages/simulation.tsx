@@ -1,7 +1,7 @@
-"use client";
 import React, { useRef, useState, useEffect } from "react";
 import Header from "@/components/header";
 import Image from "next/image";
+import L from "leaflet";
 
 export default function Simulation() {
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -13,12 +13,11 @@ export default function Simulation() {
   const [selectedDays, setSelectedDays] = useState<number | null>(null);
   const markerRefs = useRef<any[]>([]);
   const mapRef = useRef<HTMLDivElement>(null);
-
-  const closeModal = () => setModalOpen(false);
-  const toggleDropdown = () => setDropdownOpen(!dropdownOpen);
-  const openModal = () => setModalOpen(true);
-
   const [historyVisible, setHistoryVisible] = useState(false);
+
+  const toggleHistory = () => {
+    setHistoryVisible(!historyVisible);
+  };
 
   useEffect(() => {
     import("leaflet/dist/leaflet.css");
@@ -108,9 +107,32 @@ export default function Simulation() {
     L.polyline(latLngs, { color: "blue" }).addTo(map);
   }
 
-  const toggleHistory = () => {
-    setHistoryVisible(!historyVisible);
+  // Reset function to clear coordinates and map markers
+  const resetSimulation = () => {
+    setCoordinatesList([]);
+    if (mapInstance) {
+      mapInstance.eachLayer((layer: any) => {
+        if (layer instanceof L.Marker) {
+          mapInstance.removeLayer(layer);
+        }
+      });
+    }
+    setSelectedDays(null); // Optionally reset the selected days
+    setHistoryVisible(false); // Optionally close the history modal
   };
+
+  // Get the current date and time
+  const now = new Date();
+  const dateStr = now.toLocaleDateString("en-GB");
+  const timeStr = now.toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  // Generate the coordinate string
+  const coordStr = coordinatesList
+    .map(([lat, lng]) => `${lat.toFixed(4)}, ${lng.toFixed(4)}`)
+    .join("; ");
 
   return (
     <div className="font-poppins bg-gradient-to-br from-[#065C7C] to-[#0C2E3F] min-h-screen">
@@ -206,46 +228,60 @@ export default function Simulation() {
                   Start Simulating
                 </button>
               </div>
-            </div>
-          </section>
-          {historyVisible && (
-            <div
-              id="historyModal"
-              className="fixed inset-0 flex items-center justify-center bg-black/50 z-50"
-            >
-              <div className="bg-white rounded-xl p-6 max-w-2xl w-full overflow-y-auto max-h-[80vh]">
-                <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-xl font-bold text-black">History</h2>
-                  <button
-                    id="closeModalBtn"
-                    onClick={toggleHistory}
-                    className="cursor-pointer p-1.5 hover:bg-gray-200 rounded-full transition duration-150"
-                  >
-                    <Image
-                      src="/icons/Close.png"
-                      alt="Close"
-                      width={12}
-                      height={12}
-                    />
-                  </button>
-                </div>
-                <div className="space-y-4">
-                  {coordinatesList.length === 0 ? (
-                    <p>No history available.</p>
-                  ) : (
-                    coordinatesList.map(([lat, lng], idx) => (
-                      <div key={idx} className="rounded-xl p-4 shadow border">
-                        <strong>Coordinate {idx + 1}:</strong> {lat.toFixed(5)},{" "}
-                        {lng.toFixed(5)}
-                      </div>
-                    ))
-                  )}
-                </div>
+              {/* Reset Button */}
+              <div className="flex justify-center mt-4">
+                <button
+                  type="button"
+                  onClick={resetSimulation}
+                  className="bg-red-600 border border-white px-6 py-1 rounded-full text-white hover:bg-red-500"
+                >
+                  Reset Simulation
+                </button>
               </div>
             </div>
-          )}
+          </section>
         </aside>
       </div>
+
+      {historyVisible && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
+          <div className="bg-white rounded-xl p-6 max-w-2xl w-full overflow-y-auto max-h-[80vh]">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-2xl font-bold text-black">History</h2>
+              <button
+                onClick={toggleHistory}
+                className="cursor-pointer p-1.5 hover:bg-gray-200 rounded-full transition duration-150"
+              >
+                <Image
+                  src="/icons/Close.png"
+                  alt="Close"
+                  width={12}
+                  height={12}
+                />
+              </button>
+            </div>
+            <div className="space-y-4">
+              {coordinatesList.length === 0 ? (
+                <p>No coordinates selected yet.</p>
+              ) : (
+                <div className="rounded-xl p-4 shadow-[0px_0px_10px_rgba(0,0,0,0.4)] space-y-1">
+                  <div className="flex justify-between items-center">
+                    <p className="font-semibold">{dateStr}</p>
+                    <span className="text-sm">{timeStr}</span>
+                  </div>
+                  <p className="text-sm text-gray-700">
+                    {coordinatesList.length} coordinate
+                    {coordinatesList.length > 1 ? "s" : ""} selected
+                  </p>
+                  <p className="text-sm">
+                    <span className="font-bold">Coordinates:</span> {coordStr}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
