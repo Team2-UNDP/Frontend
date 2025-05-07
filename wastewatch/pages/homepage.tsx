@@ -41,20 +41,6 @@ export default function WasteWatchDashboard() {
         attribution: "&copy; OpenStreetMap contributors",
       }).addTo(map);
 
-      map.on("click", (e: any) => {
-        const { lat, lng } = e.latlng;
-        setCoordinatesList((prev) => [...prev, [lat, lng]]);
-
-        const customIcon = L.icon({
-          iconUrl: "/icons/Coordinate.png",
-          iconSize: [16, 18],
-          iconAnchor: [16, 32],
-          popupAnchor: [0, -32],
-        });
-
-        L.marker([lat, lng], { icon: customIcon }).addTo(map);
-      });
-
       requestAnimationFrame(() => map.invalidateSize());
       setMapInstance(map);
     };
@@ -85,10 +71,10 @@ export default function WasteWatchDashboard() {
               alt="Drone"
               width={32}
               height={24}
-              className="absolute top-[40%] left-[45%] z-50"
+              className="absolute top-[40%] left-[45%] z-40"
             />
 
-            <div className="absolute top-[40%] left-[50%] w-fit group z-50">
+            <div className="absolute top-[40%] left-[50%] w-fit group z-40">
               <Image
                 src="/icons/Active.png"
                 alt="Active Buoy"
@@ -180,7 +166,7 @@ export default function WasteWatchDashboard() {
               alt="Inactive Buoy"
               width={32}
               height={32}
-              className="absolute top-[60%] left-[40%] z-50"
+              className="absolute top-[60%] left-[40%] z-40"
             />
 
             {/* Legends */}
