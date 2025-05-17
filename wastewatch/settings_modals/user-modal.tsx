@@ -1,7 +1,8 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
+import router from "next/router";
 
 export default function UserModal({
   isOpen,
@@ -13,6 +14,47 @@ export default function UserModal({
   const [activeSection, setActiveSection] = useState<
     "info" | "add" | "edit" | "delete"
   >("info");
+  const [userInfo, setUserInfo] = useState<any>(null); // Added userInfo state
+  const [isFormValid, setIsFormValid] = useState<boolean>(false); // Added isFormValid state
+  const formRef = useRef<HTMLFormElement | null>(null);
+  const token = localStorage.getItem("token"); // Make sure token is stored under this key
+
+  useEffect(() => {
+    const validateForm = () => {
+      if (!formRef.current) return;
+  
+      const formData = new FormData(formRef.current);
+      const name = formData.get("name");
+      const username = formData.get("username");
+      const password = formData.get("password");
+      const role = formData.get("role");
+  
+      const isAdd = activeSection === "add";
+  
+      // In "add" mode, password is required; in "edit" mode, it's optional
+      const isPasswordValid = isAdd ? !!password : true;
+  
+      const isValid =
+        !!name && !!username && isPasswordValid && !!role;
+  
+      setIsFormValid(isValid);
+    };
+  
+    formRef.current = document.querySelector("form");
+  
+    if (formRef.current) {
+      formRef.current.addEventListener("input", validateForm);
+    }
+  
+    // Initial validation
+    validateForm();
+  
+    return () => {
+      if (formRef.current) {
+        formRef.current.removeEventListener("input", validateForm);
+      }
+    };
+  }, [activeSection, userInfo]);
   
   const handleAddUser = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -21,51 +63,57 @@ export default function UserModal({
     const userData = {
       name: formData.get("name"),
       username: formData.get("username"),
-      password: formData.get("password"),
       is_admin: formData.get("role") === "Admin",
+      ...(activeSection === "edit"
+        ? (formData.get("password") ? { password: formData.get("password") } : {})
+        : { password: formData.get("password") }),
     };
-  
     try {
       const url =
       activeSection === "add"
         ? "http://127.0.0.1:5000/user"
-        : `http://127.0.0.1:5000/user/${userInfo?.username}`; // Use username or ID for editing
+        : `http://127.0.0.1:5000/user/update`;
 
-      const method = activeSection === "add" ? "POST" : "PUT"; // POST for add, PUT for edit
+      const method = activeSection === "add" ? "POST" : "PUT";
 
       const res = await fetch(url, {
         method,
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`, // Include the bearer token
         },
         body: JSON.stringify(userData),
       });
-  
+
       if (res.ok) {
-        alert(activeSection === "add" ? "User added successfully!" : "User updated successfully!");
-        onClose(); // Close the modal
+      alert(activeSection === "add" ? "User added successfully!" : "User updated successfully!");
+      onClose(); // Close the modal
       } else {
-        const error = await res.json();
-        alert(`Error: ${error.detail}`);
+      const error = await res.json();
+      alert(`Error: ${error.detail}`);
       }
     } catch (err) {
-      console.error("Error adding user:", err);
-      alert("Failed to add user. Please try again.");
+      console.error("Error processing user:", err);
+      alert("Failed to process user. Please try again.");
     }
   };
 
-  const [userInfo, setUserInfo] = useState<any>(null); // Added userInfo state
   
   // Fetch user info from local storage when the modal is opened
   useEffect(() => {
     if (isOpen) {
       const storedUserInfo = localStorage.getItem("user_info");
       if (storedUserInfo) {
-        console.log("Stored User Info:", storedUserInfo);
         setUserInfo(JSON.parse(storedUserInfo));
       }
     }
   }, [isOpen]);
+
+  if (!token) {
+    alert("User not authenticated. Please log in.");
+    router.push("/"); // Redirect to login page
+    return;
+  }
 
   if (!isOpen) return null;
 
@@ -208,7 +256,10 @@ export default function UserModal({
                 <div className="flex justify-center py-6">
                   <button
                     type="submit"
-                    className="bg-[#203F5A] text-white px-10 py-2 rounded-full shadow"
+                    className={`bg-[#203F5A] text-white px-10 py-2 rounded-full shadow ${
+                      !isFormValid ? "opacity-50 cursor-not-allowed" : ""
+                    }`}
+                    disabled={!isFormValid}
                   >
                     {activeSection === "add" ? "Add User" : "Edit User"}
                   </button>
