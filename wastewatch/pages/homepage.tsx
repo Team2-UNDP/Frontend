@@ -25,7 +25,6 @@ export default function WasteWatchDashboard() {
 
   useEffect(() => {
     const token = localStorage.getItem("token");
-    console.log("Token:", token);
   
     if (!token) {
       setIsSignedIn(false);
@@ -38,15 +37,19 @@ export default function WasteWatchDashboard() {
         const res = await fetch("http://127.0.0.1:5000/user/me", {
           headers: { Authorization: `Bearer ${token}` },
         });
-  
+        const data = await res.json();
+        
         if (res.ok) {
+          localStorage.setItem("user_info",  JSON.stringify(data));
           setIsSignedIn(true);
         } else {
+          console.log(data)
           setIsSignedIn(false);
           localStorage.removeItem("token");
           router.push("/");
         }
       } catch (err) {
+        console.log(err)
         setIsSignedIn(false);
         localStorage.removeItem("token");
         router.push("/");

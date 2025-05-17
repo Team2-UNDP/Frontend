@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
 import { useState, useEffect } from "react";
 import Image from "next/image";
@@ -12,46 +13,61 @@ export default function UserModal({
   const [activeSection, setActiveSection] = useState<
     "info" | "add" | "edit" | "delete"
   >("info");
+  
+  const handleAddUser = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+  
+    const formData = new FormData(e.target as HTMLFormElement);
+    const userData = {
+      name: formData.get("name"),
+      username: formData.get("username"),
+      password: formData.get("password"),
+      is_admin: formData.get("role") === "Admin",
+    };
+  
+    try {
+      const url =
+      activeSection === "add"
+        ? "http://127.0.0.1:5000/user"
+        : `http://127.0.0.1:5000/user/${userInfo?.username}`; // Use username or ID for editing
+
+      const method = activeSection === "add" ? "POST" : "PUT"; // POST for add, PUT for edit
+
+      const res = await fetch(url, {
+        method,
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(userData),
+      });
+  
+      if (res.ok) {
+        alert(activeSection === "add" ? "User added successfully!" : "User updated successfully!");
+        onClose(); // Close the modal
+      } else {
+        const error = await res.json();
+        alert(`Error: ${error.detail}`);
+      }
+    } catch (err) {
+      console.error("Error adding user:", err);
+      alert("Failed to add user. Please try again.");
+    }
+  };
+
+  const [userInfo, setUserInfo] = useState<any>(null); // Added userInfo state
+  
+  // Fetch user info from local storage when the modal is opened
+  useEffect(() => {
+    if (isOpen) {
+      const storedUserInfo = localStorage.getItem("user_info");
+      if (storedUserInfo) {
+        console.log("Stored User Info:", storedUserInfo);
+        setUserInfo(JSON.parse(storedUserInfo));
+      }
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
-
-  const [userInfo, setUserInfo] = useState<{
-    name: string;
-    username: string;
-    role: string;
-    dateCreated: string;
-  } | null>(null);
-
-  useEffect(() => {
-    const fetchUserInfo = async () => {
-      if (isOpen) {
-        try {
-          const token = localStorage.getItem("token");
-          const res = await fetch("http://127.0.0.1:5000/user/me", {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          });
-
-          if (res.ok) {
-            const data = await res.json();
-            setUserInfo({
-              name: data.name,
-              username: data.username,
-              role: data.role,
-              dateCreated: data.date_created,
-            });
-          } else {
-            console.error("Failed to fetch user info");
-          }
-        } catch (err) {
-          console.error("Error fetching user info:", err);
-        }
-      }
-    };
-
-    fetchUserInfo();
-  }, [isOpen]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
@@ -106,24 +122,24 @@ export default function UserModal({
           {activeSection === "info" && (
             <div className="space-y-4">
               <h3 className="text-xl font-bold mb-4">User Information</h3>
-              <p>
-                <strong>Name:</strong> John Doe Cruz
-              </p>
-              <p>
-                <strong>Username:</strong> JDCruz
-              </p>
-              <p>
-                <strong>Role:</strong> Admin
-              </p>
-              <p>
-                <strong>Date Created:</strong> 10/10/23
-              </p>
+                <p>
+                <strong>Name:</strong> {userInfo?.name || "N/A"}
+                </p>
+                <p>
+                <strong>Username:</strong> {userInfo?.username || "N/A"}
+                </p>
+                <p>
+                <strong>Role:</strong> {userInfo?.is_admin ? "Admin" : "Staff"}
+                </p>
+                <p>
+                <strong>Date Created:</strong> {userInfo?.date_created || "N/A"}
+                </p>
             </div>
           )}
 
           {(activeSection === "add" || activeSection === "edit") && (
             <>
-              <form className="space-y-6">
+              <form className="space-y-6" onSubmit={handleAddUser}>
                 <h3 className="text-xl font-bold">
                   {activeSection === "add" ? "Add Account" : "Edit Account"}
                 </h3>
@@ -133,7 +149,9 @@ export default function UserModal({
                   </label>
                   <input
                     id="name"
+                    name="name"
                     type="text"
+                    defaultValue={activeSection === "edit" ? userInfo?.name : ""}
                     className="flex-1 border border-black rounded px-2 py-1"
                   />
                 </div>
@@ -146,7 +164,9 @@ export default function UserModal({
                   </label>
                   <input
                     id="User_id"
+                    name="username"
                     type="text"
+                    defaultValue={activeSection === "edit" ? userInfo?.username : ""}
                     className="flex-1 border border-black rounded px-2 py-1"
                   />
                 </div>
@@ -156,6 +176,8 @@ export default function UserModal({
                   </label>
                   <select
                     id="status"
+                    name="role"
+                    defaultValue={activeSection === "edit" ? (userInfo?.is_admin ? "Admin" : "Staff") : ""}
                     className="flex-1 border border-black rounded px-2 py-1"
                   >
                     <option>Admin</option>
@@ -163,11 +185,13 @@ export default function UserModal({
                   </select>
                 </div>
                 <div className="flex items-center gap-4">
-                  <label htmlFor="location" className="font-bold min-w-[60px]">
+                    <label htmlFor="location" className="font-bold min-w-[60px]">
                     Password:
-                  </label>
+                    </label>
                   <input
-                    id="location"
+                    id="password"
+                    name="password"
+                    placeholder={activeSection === "edit" ? "Leave blank to keep current password" : ""}
                     className="flex-1 border border-black rounded px-2 py-1"
                   />
                 </div>
@@ -176,7 +200,8 @@ export default function UserModal({
                     Confirm Password:
                   </label>
                   <input
-                    id="feedback"
+                    id="conf_password"
+                    placeholder={activeSection === "edit" ? "Leave blank to keep current password" : ""}
                     className="flex-1 border border-black rounded px-2 py-1"
                   />
                 </div>

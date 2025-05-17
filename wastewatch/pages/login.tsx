@@ -13,9 +13,11 @@ export default function Home() {
     const token = localStorage.getItem("token");
     if (token) {
       router.push("/homepage");
+    } else {
+      router.push("/");
     }
   }, []);
-  
+
   const toggleLoginForm = () => {
     setIsModalOpen((prevState) => !prevState);
   };
