@@ -108,7 +108,28 @@ export default function Header() {
                   Drone
                 </li>
                 <li
-                  onClick={() => alert("Logging out...")}
+                  onClick={async () => {
+                    try {
+                      const res = await fetch("http://127.0.0.1:5000/user/logout", {
+                        method: "POST",
+                        headers: {
+                          "Content-Type": "application/json",
+                          Authorization: `Bearer ${localStorage.getItem("token")}`,
+                        },
+                      });
+                
+                      if (res.ok) {
+                        localStorage.removeItem("token"); // Clear token from localStorage
+                        alert("Logged out successfully!");
+                        window.location.href = "/login"; // Redirect to login page
+                      } else {
+                        alert("Logout failed. Please try again.");
+                      }
+                    } catch (err) {
+                      console.error("Logout error:", err);
+                      alert("Logout failed. Server error.");
+                    }
+                  }}
                   className="flex items-center gap-2 cursor-pointer hover:text-[#065C7C]"
                 >
                   <Image

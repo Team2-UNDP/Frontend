@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 
 export default function UserModal({
@@ -14,6 +14,44 @@ export default function UserModal({
   >("info");
 
   if (!isOpen) return null;
+
+  const [userInfo, setUserInfo] = useState<{
+    name: string;
+    username: string;
+    role: string;
+    dateCreated: string;
+  } | null>(null);
+
+  useEffect(() => {
+    const fetchUserInfo = async () => {
+      if (isOpen) {
+        try {
+          const token = localStorage.getItem("token");
+          const res = await fetch("http://127.0.0.1:5000/user/me", {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+
+          if (res.ok) {
+            const data = await res.json();
+            setUserInfo({
+              name: data.name,
+              username: data.username,
+              role: data.role,
+              dateCreated: data.date_created,
+            });
+          } else {
+            console.error("Failed to fetch user info");
+          }
+        } catch (err) {
+          console.error("Error fetching user info:", err);
+        }
+      }
+    };
+
+    fetchUserInfo();
+  }, [isOpen]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">

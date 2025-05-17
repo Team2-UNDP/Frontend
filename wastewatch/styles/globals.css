@@ -73,12 +73,27 @@
   }
 }
 
+/* globals.css */
+.bg-ocean-gradient {
+  @apply bg-gradient-to-br from-[#065C7C] to-[#0C2E3F];
+}
+
+
 .modal-enter {
   animation: modalEnter 0.5s ease-out;
 }
 
 .modal-exit {
   animation: modalExit 0.3s ease-in;
+}
+.loader {
+  border-top-color: #3498db; /* Spinner color */
+  animation: spin 1s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 input:-webkit-autofill,

@@ -1,11 +1,21 @@
 import Head from "next/head";
 import { useState } from "react";
+import { useRouter } from "next/router";
+import { useEffect } from "react";
 
 export default function Home() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const router = useRouter();
 
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      router.push("/homepage");
+    }
+  }, []);
+  
   const toggleLoginForm = () => {
     setIsModalOpen((prevState) => !prevState);
   };
@@ -14,7 +24,7 @@ export default function Home() {
     e.preventDefault();
 
     try {
-      const res = await fetch("http://localhost:5000/login", {
+      const res = await fetch("http://127.0.0.1:5000/user/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -23,10 +33,16 @@ export default function Home() {
       });
 
       const data = await res.json();
+      console.log("res", data);
 
       if (res.ok) {
-        localStorage.setItem("token", data.token);
-        alert("Login successful!");
+        if (data[0].access_token) {
+          localStorage.setItem("token", data[0].access_token);
+          router.push("/homepage");
+          alert("Login successful!");
+        } else {
+          alert("Error logging in.");
+        }
       } else {
         alert(data.message || "Login failed.");
       }
@@ -35,6 +51,8 @@ export default function Home() {
       alert("Login failed. Server error.");
     }
   };
+
+
 
   return (
     <>
