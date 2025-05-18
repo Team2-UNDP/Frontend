@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 
 export default function BuoyModal({
@@ -12,6 +12,138 @@ export default function BuoyModal({
   const [activeSection, setActiveSection] = useState<
     "info" | "add" | "edit" | "delete"
   >("info");
+  const [buoyData, setBuoyData] = useState<any>(null);
+  const [buoys, setBuoys] = useState<any[]>([]); // Store all buoys
+  const [selectedBuoy, setSelectedBuoy] = useState<string>(""); // Track the selected buoy ID
+  const [refreshBuoys, setRefreshBuoys] = useState(false); // Trigger re-fetching of buoys
+  const [liveBuoyData, setLiveBuoyData] = useState<any>(null); // Store live buoy data
+
+  useEffect(() => {
+    const fetchBuoyData = async () => {
+      try {
+        const res = await fetch("http://127.0.0.1:5000/buoy/", {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+  
+        if (res.ok) {
+          const response = await res.json();
+          const data = response.data;
+          console.log("all buoy", data); // Extract the `data` array from the response
+          setBuoys(data); // Store all buoys in state
+          if (data.length > 0) {
+            setSelectedBuoy(data[0].name); // Set the first buoy's name as the default selection
+            setBuoyData(data[0]); // Set the first buoy's data as the default
+          }
+        } else {
+          const error = await res.json();
+          console.error("Error fetching buoy data:", error.detail);
+        }
+      } catch (err) {
+        console.error("Error fetching buoy data:", err);
+      }
+    };
+  
+    if (isOpen || refreshBuoys) {
+      fetchBuoyData();
+      setRefreshBuoys(false); // Reset the refresh trigger
+    }
+  }, [isOpen, refreshBuoys]);
+
+  const handleBuoyChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const selectedName = e.target.value;
+    setSelectedBuoy(selectedName);
+
+    // Find the selected buoy's data by name and update the state
+    const selectedBuoyData = buoys.find((buoy) => buoy.name === selectedName);
+    setBuoyData(selectedBuoyData || null);
+  };
+  const latestLocations = buoyData?.locations
+  ?.sort((a: { date: string }, b: { date: string }) => new Date(b.date).getTime() - new Date(a.date).getTime())
+  .slice(0, 5);
+
+  const fetchLiveBuoyData = async (liveFeedLink: string) => {
+    if (!liveFeedLink) {
+      console.error("Live feed link is not available.");
+      return;
+    }
+
+    try {
+      const res = await fetch(liveFeedLink, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (res.ok) {
+        const response = await res.json();
+        setLiveBuoyData(response.data); // Set the live buoy data in state
+      } else {
+        const error = await res.json();
+        console.error("Error fetching live buoy data:", error.detail);
+      }
+    } catch (err) {
+      console.error("Error fetching live buoy data:", err);
+    }
+  };
+
+  const handleAddBuoy = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+
+    const formData = new FormData(e.target as HTMLFormElement);
+    const buoyData = {
+      name: formData.get("name") as string,
+      status: formData.get("status") as string,
+      live_feed_link: formData.get("feedback") as string, // Use live feed link from form
+      installation_date: new Date().toISOString(), // Add installation date as the current date
+    };
+
+    // Validation: Ensure all fields are filled
+    if (!buoyData.name || !buoyData.status || !buoyData.live_feed_link) {
+      alert("All fields are required. Please fill out all fields.");
+      return;
+    }
+
+    try {
+      // Fetch live buoy data using the existing method
+      await fetchLiveBuoyData(buoyData.live_feed_link);
+
+      // Merge live buoy data with form data
+      const completeBuoyData = {
+        ...buoyData,
+        battery_level: liveBuoyData?.battery_level || 0,
+        last_charged: liveBuoyData?.last_charged || "",
+        last_maintenance: liveBuoyData?.last_maintenance || "",
+        locations: liveBuoyData?.locations || [],
+      };
+      console.log("complete buoy data", completeBuoyData);
+
+      // Send the complete buoy data to the backend
+      const res = await fetch("http://127.0.0.1:5000/buoy/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(completeBuoyData),
+      });
+
+      if (res.ok) {
+        console.log("add buoy res", res);
+        alert("Buoy added successfully!");
+        setRefreshBuoys(true); // Trigger re-fetching of buoys
+        onClose(); // Close the modal
+      } else {
+        const error = await res.json();
+        alert(`Error: ${error.detail}`);
+      }
+    } catch (err) {
+      console.error("Error adding buoy:", err);
+      alert("Failed to add buoy. Please try again.");
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -20,7 +152,10 @@ export default function BuoyModal({
       <div className="bg-white w-[700px] rounded-xl shadow-lg relative p-8 flex">
         {/* Close Button */}
         <button
-          onClick={onClose}
+          onClick={() => {
+            console.log("Close button clicked");
+            onClose();
+          }}
           className="absolute top-4 right-4 p-1.5 hover:bg-gray-200 rounded-full transition duration-150 cursor-pointer"
         >
           <Image src="/icons/Close.png" alt="Close" width={12} height={12} />
@@ -76,29 +211,59 @@ export default function BuoyModal({
                 <select
                   id="name"
                   className="flex-1 border border-black rounded px-2 py-1"
+                  value={selectedBuoy}
+                  onChange={handleBuoyChange} // Handle buoy selection change
                 >
-                  <option>Buoy 1</option>
-                  <option>Buoy 2</option>
+                  {buoys.map((buoy) => (
+                    <option key={buoy.buoy_id} value={buoy.buoy_id}>
+                      {buoy.name}
+                    </option>
+                  ))}
                 </select>
               </div>
-              <p>
-                <strong>Buoy ID:</strong> B001
-              </p>
-              <p>
-                <strong>Status:</strong> Active
-              </p>
-              <p>
-                <strong>Date Installed:</strong> 10/10/23
-              </p>
-              <p>
-                <strong>Last Maintenance:</strong> 10/10/23
-              </p>
-              <p>
-                <strong>Battery:</strong> 86%
-              </p>
-              <p>
-                <strong>Last Charged:</strong> Last 4 days ago
-              </p>
+              {buoyData ? (
+                <>
+                  <p>
+                    <strong>Buoy ID:</strong> {buoyData._id || "N/A"}
+                  </p>
+                  <p>
+                    <strong>Status:</strong> {buoyData.status || "N/A"}
+                  </p>
+                  <p>
+                    <strong>Date Installed:</strong> {new Date(buoyData.installation_date).toLocaleDateString() || "N/A"}
+                  </p>
+                  <p>
+                    <strong>Last Maintenance:</strong> {new Date(buoyData.last_maintenance).toLocaleDateString() || "N/A"}
+                  </p>
+                  <p>
+                    <strong>Battery Level:</strong> {buoyData.battery_level || "N/A"}%
+                  </p>
+                  <p>
+                    <strong>Last Charged:</strong> {new Date(buoyData.last_charged).toLocaleDateString() || "N/A"}
+                  </p>
+                  <p>
+                    <strong>Live Feed Link:</strong> <a href={buoyData.live_feed_link} target="_blank" rel="noopener noreferrer">{buoyData.live_feed_link}</a>
+                  </p>
+                  <p>
+                    <strong>Locations:</strong>
+                  </p>
+                  <div className="max-h-40 overflow-y-auto border border-gray-300 rounded p-2">
+                  <ul className="list-disc pl-6">
+                    {latestLocations && latestLocations.length > 0 ? (
+                      latestLocations.map((location: { date: string; lat: number; long: number }, index: number) => (
+                        <li key={index}>
+                          Date: {new Date(location.date).toLocaleDateString()}, Latitude: {location.lat}, Longitude: {location.long}
+                        </li>
+                      ))
+                    ) : (
+                      <li>No location data available.</li>
+                    )}
+                  </ul>
+                </div>
+                </>
+              ) : (
+                <p>No buoy data available.</p>
+              )}
             </div>
           )}
 
@@ -109,24 +274,27 @@ export default function BuoyModal({
                   {activeSection === "add" ? "Add Buoy" : "Edit Buoy"}
                 </h3>
                 {activeSection === "edit" && (
-                  <select className="border border-black rounded px-4 py-1 w-fit ">
+                  <select
+                   className="border border-black rounded px-4 py-1 w-fit ">
                     <option>Buoy 1</option>
                     <option>Buoy 2</option>
                   </select>
                 )}
               </div>
-              <form className="space-y-6">
+              <form className="space-y-6" onSubmit={handleAddBuoy}>
                 <div className="flex items-start">
                   <label htmlFor="name" className="font-bold min-w-[60px] mt-1">
                     Name:
                   </label>
                   <input
                     id="name"
+                    name="name"
                     type="text"
                     className="flex-1 border border-black rounded px-2 py-1"
                   />
                 </div>
-                <div className="flex items-start">
+                {activeSection === "edit" && (
+                  <div className="flex items-start">
                   <label
                     htmlFor="Buoy_id"
                     className="font-bold min-w-[80px] mt-1"
@@ -135,16 +303,21 @@ export default function BuoyModal({
                   </label>
                   <input
                     id="Buoy_id"
+                    name="Buoy_id"
                     type="text"
-                    className="flex-1 border border-black rounded px-2 py-1"
+                    className="flex-1 border border-black rounded px-2 py-1 bg-gray-200"
+                    value={selectedBuoy}
+                    readOnly
                   />
-                </div>
+                  </div>
+                )}
                 <div className="flex items-center">
                   <label htmlFor="status" className="font-bold min-w-[60px]">
                     Status:
                   </label>
                   <select
                     id="status"
+                    name="status"
                     className="flex-1 border border-black rounded px-2 py-1"
                   >
                     <option>Active</option>
@@ -152,23 +325,12 @@ export default function BuoyModal({
                   </select>
                 </div>
                 <div className="flex items-center gap-4">
-                  <label
-                    htmlFor="location"
-                    className="font-bold text-sm min-w-[60px]"
-                  >
-                    Location of Deployment:
-                  </label>
-                  <input
-                    id="location"
-                    className="flex-1 border border-black rounded px-2 py-1"
-                  />
-                </div>
-                <div className="flex items-center gap-4">
                   <label htmlFor="feedback" className="font-bold min-w-[60px]">
                     Live Feedback Link:
                   </label>
                   <input
                     id="feedback"
+                    name="feedback"
                     className="flex-1 border border-black rounded px-2 py-1"
                   />
                 </div>
@@ -182,16 +344,17 @@ export default function BuoyModal({
                     </label>
                     <input
                       id="last_maintenance"
+                      name="last_maintenance"
                       className="flex-1 border border-black rounded px-2 py-1"
                     />
                   </div>
                 )}
                 <div className="flex justify-center py-6">
                   <button
-                    type="submit"
-                    className="bg-[#203F5A] text-white px-10 py-2 rounded-full shadow"
+                  type="submit"
+                  className="bg-[#203F5A] text-white px-10 py-2 rounded-full shadow"
                   >
-                    {activeSection === "add" ? "Add Buoy" : "Edit Buoy"}
+                  {activeSection === "add" ? "Add Buoy" : "Edit Buoy"}
                   </button>
                 </div>
               </form>
