@@ -2,14 +2,11 @@ import React, { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import Header from "@/components/header";
 import { useRouter } from "next/router";
+import LeafletMap from "@/components/leaflet_map";
 
 export default function WasteWatchDashboard() {
-  const [mapInstance, setMapInstance] = useState<any>(null);
-  const [coordinatesList, setCoordinatesList] = useState<[number, number][]>(
-    []
-  );
+  const [coordinatesList, setCoordinatesList] = useState<[number, number][]>([]);
   const [selectedDays, setSelectedDays] = useState<number | null>(null);
-  const mapRef = useRef<HTMLDivElement>(null);
   const [historyVisible, setHistoryVisible] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [isSignedIn, setIsSignedIn] = useState(false);
@@ -22,34 +19,35 @@ export default function WasteWatchDashboard() {
   const closeModal = () => setModalOpen(false);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+  const [buoys, setBuoys] = useState<any[]>([]); // Store buoy data, initialized as an empty array
 
   useEffect(() => {
     const token = localStorage.getItem("token");
-  
+
     if (!token) {
       setIsSignedIn(false);
       router.push("/");
       return setLoading(false);
     }
-  
+
     const verifyUser = async () => {
       try {
         const res = await fetch("http://127.0.0.1:5000/user/me", {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();
-        
+
         if (res.ok) {
-          localStorage.setItem("user_info",  JSON.stringify(data));
+          localStorage.setItem("user_info", JSON.stringify(data));
           setIsSignedIn(true);
         } else {
-          console.log(data)
+          console.log(data);
           setIsSignedIn(false);
           localStorage.removeItem("token");
           router.push("/");
         }
       } catch (err) {
-        console.log(err)
+        console.log(err);
         setIsSignedIn(false);
         localStorage.removeItem("token");
         router.push("/");
@@ -57,32 +55,39 @@ export default function WasteWatchDashboard() {
         setLoading(false); // Ensure this is always called last
       }
     };
-  
+
     verifyUser();
   }, []);
-  
-  useEffect(() => {
-    if (loading || !isSignedIn || typeof window === "undefined" || !mapRef.current || mapInstance) {
-      return;
-    }
-  
-    const loadMap = async () => {
-      const L = (await import("leaflet")).default;
-      await import("leaflet/dist/leaflet.css");
-  
-      const map = L.map(mapRef.current as HTMLElement).setView([7.0806, 125.6476], 10);
-  
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: "&copy; OpenStreetMap contributors",
-      }).addTo(map);
-  
-      requestAnimationFrame(() => map.invalidateSize());
-      setMapInstance(map);
-    };
-  
-    loadMap();
-  }, [loading, isSignedIn, mapRef, mapInstance]);
 
+  // Fetch buoy data
+  useEffect(() => {
+    const fetchBuoys = async () => {
+      try {
+        const res = await fetch("http://127.0.0.1:5000/buoy", {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (res.ok) {
+          const responseData = await res.json();
+          if (responseData && Array.isArray(responseData.data)) {
+            setBuoys(responseData.data); // Store buoy data in state if it's an array inside the data attribute
+          } else {
+            console.error("Unexpected data format: Buoys data is not an array");
+            setBuoys([]); // Fallback to an empty array
+          }
+        } else {
+          console.error("Failed to fetch buoys");
+        }
+      } catch (err) {
+        console.error("Error fetching buoys:", err);
+      }
+    };
+
+    fetchBuoys();
+  }, []);
 
   return (
     <div className="font-poppins bg-ocean-gradient min-h-screen">
@@ -101,13 +106,23 @@ export default function WasteWatchDashboard() {
           <section className="col-span-2 rounded-xl p-4 relative">
             <h2 className="text-white text-3xl font-bold mb-4">Map Overview</h2>
             <div className="relative overflow-hidden rounded-3xl border-2 border-solid border-[#ACDCFF]">
-              <div className="relative h-[500px] overflow-hidden rounded-3xl border-2 border-[#ACDCFF]">
-                <div
-                  ref={mapRef}
-                  id="map"
-                  className="absolute inset-0 w-full h-full z-10"
-                />
-              </div>
+                <div className="relative h-[500px] overflow-hidden rounded-3xl border-2 border-[#ACDCFF] z-10">
+                {/* Use the LeafletMap component */}
+                  <LeafletMap
+                  center={[7.0806, 125.6476]}
+                  zoom={10}
+                  markers={buoys.map((buoy) => ({
+                  lat: buoy.locations[buoy.locations.length - 1]?.lat || 0,
+                  long: buoy.locations[buoy.locations.length - 1]?.long || 0,
+                  name: buoy.name,
+                  status: buoy.status,
+                  batteryLevel: buoy.battery_level,
+                  lastCharged: buoy.last_charged,
+                  installationDate: buoy.installation_date,
+                  lastMaintenance: buoy.last_maintenance,
+                  }))}
+                  />
+                </div>
               <Image
                 src="/icons/Drone1.png"
                 alt="Drone"
@@ -212,7 +227,7 @@ export default function WasteWatchDashboard() {
               />
 
               {/* Legends */}
-              <div className="absolute bottom-4 left-4 bg-white rounded-md px-3 py-2 text-sm text-black shadow z-10">
+              <div className="absolute bottom-4 left-4 bg-white rounded-md px-3 py-2 text-sm text-black shadow z-20">
                 <p className="font-bold mb-1">Legends</p>
                 <span className="block w-32 h-[1px] bg-[#ADADAD] mt-1"></span>
                 <ul>
@@ -250,23 +265,23 @@ export default function WasteWatchDashboard() {
               </div>
 
               {/* Filter */}
-              <div className="absolute top-4 right-4 text-white flex px-4">
-                <div className="relative bg-opacity-10 rounded-xl px-2 py-1 ml-2 border border-white">
+                <div className="absolute top-4 right-4 text-white flex px-4">
+                <div className="relative bg-ocean-gradient rounded-xl px-2 py-1 ml-2 border border-white z-20">
                   <select
-                    id="filter"
-                    className="appearance-none bg-transparent text-white pr-32 outline-none"
+                  id="filter"
+                  className="appearance-none bg-transparent text-white pr-32 outline-none"
                   >
-                    <option>Date</option>
+                  <option>Date</option>
                   </select>
                   <Image
-                    src="/icons/Dropdown.png"
-                    alt="Dropdown"
-                    width={16}
-                    height={16}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none"
+                  src="/icons/Dropdown.png"
+                  alt="Dropdown"
+                  width={16}
+                  height={16}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none"
                   />
                 </div>
-              </div>
+                </div>
             </div>
           </section>
 

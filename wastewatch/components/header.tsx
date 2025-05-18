@@ -68,7 +68,7 @@ export default function Header() {
           </button>
 
           {showSettings && (
-            <div className="absolute right-0 mt-2 w-48 bg-white text-black rounded-xl shadow-md">
+            <div className="absolute right-0 mt-2 w-48 bg-white text-black rounded-xl shadow-md z-50">
               <div className="p-4 font-semibold">Settings</div>
               <ul className="px-4 pb-4 space-y-3">
                 <li

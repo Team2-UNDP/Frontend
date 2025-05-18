@@ -107,8 +107,8 @@ export default function BuoyModal({
       installation_date: new Date().toISOString(), // Add installation date as the current date
     };
 
-    // Validation: Ensure all fields are filled only in add mode
-    if (activeSection === "add" && (!buoyData.name || !buoyData.status || !buoyData.live_feed_link)) {
+    // Validation: Ensure all fields are filled
+    if (!buoyData.name || !buoyData.status || !buoyData.live_feed_link) {
       alert("All fields are required. Please fill out all fields.");
       return;
     }
@@ -126,68 +126,82 @@ export default function BuoyModal({
         locations: liveBuoyData?.locations || [],
       };
 
-      if (activeSection === "add") {
-        // Fetch live buoy data first
-        await fetchLiveBuoyData(completeBuoyData.live_feed_link);
+      console.log("Complete buoy data:", JSON.stringify(completeBuoyData, null, 2));
 
-        // Add buoy logic
-        const res = await fetch("http://127.0.0.1:5000/buoy/", {
-          method: "POST",
-          headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${localStorage.getItem("authToken")}`, // Add authentication token
-          },
-          body: JSON.stringify(completeBuoyData),
-        });
+      // Add buoy logic
+      const res = await fetch("http://127.0.0.1:5000/buoy/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("authToken")}`, // Add authentication token
+        },
+        body: JSON.stringify(completeBuoyData),
+      });
 
-        if (res.ok) {
-          alert("Buoy added successfully!");
-          setRefreshBuoys(true); // Trigger re-fetching of buoys
-          onClose(); // Close the modal
-        } else {
-          const error = await res.json();
-          alert(`Error: ${error.detail}`);
-        }
-      } else if (activeSection === "edit") {
-        // Fetch live buoy data first
-        await fetchLiveBuoyData(buoyData.live_feed_link);
-
-        // Edit buoy logic
-        const updatedBuoyData = {
-          battery_level: liveBuoyData?.battery_level || 0,
-          last_charged: liveBuoyData?.last_charged || "",
-          last_maintenance: liveBuoyData?.last_maintenance || "",
-          locations: liveBuoyData?.locations || [],
-          live_feed_link: buoyData.live_feed_link || liveBuoyData?.live_feed_link || selectedBuoy?.live_feed_link || "",
-          installation_date: buoyData.installation_date,
-          name: buoyData.name || selectedBuoy?.name || "",
-          status: buoyData.status,
-        };
-        console.log("selectedBuoy", selectedBuoy);
-        console.log("Updated buoy data:", JSON.stringify(updatedBuoyData, null, 2));
-
-        // Send PUT request to update buoy data        
-        const res = await fetch(`http://127.0.0.1:5000/buoy/${buoy_id}`, {
-          method: "PUT",
-          headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${localStorage.getItem("authToken")}`, // Add authentication token
-          },
-          body: JSON.stringify(updatedBuoyData),
-        });
-
-        if (res.ok) {
-          alert("Buoy updated successfully!");
-          setRefreshBuoys(true); // Trigger re-fetching of buoys
-          onClose(); // Close the modal
-        } else {
-          const error = await res.json();
-          alert(`Error: ${error.detail}`);
-        }
+      if (res.ok) {
+        alert("Buoy added successfully!");
+        setRefreshBuoys(true); // Trigger re-fetching of buoys
+        onClose(); // Close the modal
+      } else {
+        const error = await res.json();
+        alert(`Error: ${error.detail}`);
       }
     } catch (err) {
-      console.error("Error handling buoy:", err);
-      alert("Failed to process buoy. Please try again.");
+      console.error("Error adding buoy:", err);
+      alert("Failed to add buoy. Please try again.");
+    }
+  };
+
+  const handleEditBuoy = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+
+    const formData = new FormData(e.target as HTMLFormElement);
+    const buoyData = {
+      name: formData.get("name") as string,
+      status: formData.get("status") as string,
+      live_feed_link: formData.get("feedback") as string, // Use live feed link from form
+    };
+
+    try {
+      // Fetch live buoy data using the existing method
+      await fetchLiveBuoyData(buoyData.live_feed_link);
+
+      // Merge live buoy data with form data
+      const updatedBuoyData = {
+        battery_level: liveBuoyData?.battery_level || 0,
+        last_charged: liveBuoyData?.last_charged || "",
+        last_maintenance: liveBuoyData?.last_maintenance || "",
+        locations: liveBuoyData?.locations || [],
+        live_feed_link: buoyData.live_feed_link || liveBuoyData?.live_feed_link || selectedBuoy?.live_feed_link || "",
+        installation_date: buoyData.installation_date,
+        name: buoyData.name || selectedBuoy?.name || "",
+        status: buoyData.status,
+      };
+
+      console.log("selectedBuoy", selectedBuoy);
+      console.log("Updated buoy data:", JSON.stringify(updatedBuoyData, null, 2));
+
+      // Send PUT request to update buoy data
+      const res = await fetch(`http://127.0.0.1:5000/buoy/${buoy_id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("authToken")}`, // Add authentication token
+        },
+        body: JSON.stringify(updatedBuoyData),
+      });
+
+      if (res.ok) {
+        alert("Buoy updated successfully!");
+        setRefreshBuoys(true); // Trigger re-fetching of buoys
+        onClose(); // Close the modal
+      } else {
+        const error = await res.json();
+        alert(`Error: ${error.detail}`);
+      }
+    } catch (err) {
+      console.error("Error editing buoy:", err);
+      alert("Failed to edit buoy. Please try again.");
     }
   };
 
@@ -392,14 +406,12 @@ export default function BuoyModal({
                   id="feedback"
                   name="feedback"
                   type="text"
-                  value={activeSection === "edit" ? (buoyData?.live_feed_link || "") : ""}
+                  value={buoyData?.live_feed_link || ""}
                   onChange={(e) => {
-                    if (activeSection === "edit") {
                     setBuoyData((prev) => ({
-                      ...prev,
-                      live_feed_link: e.target.value,
+                    ...prev,
+                    live_feed_link: e.target.value,
                     }));
-                    }
                   }}
                   className="flex-1 border border-black rounded px-2 py-1"
                   />
