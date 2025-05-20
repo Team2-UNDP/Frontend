@@ -17,7 +17,14 @@ export default function UserModal({
   const [userInfo, setUserInfo] = useState<any>(null); // Added userInfo state
   const [isFormValid, setIsFormValid] = useState<boolean>(false); // Added isFormValid state
   const formRef = useRef<HTMLFormElement | null>(null);
-  const token = localStorage.getItem("token"); // Make sure token is stored under this key
+  const [token, setToken] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const storedToken = localStorage.getItem("token");
+      setToken(storedToken);
+    }
+  }, []);
 
   useEffect(() => {
     const validateForm = () => {
@@ -109,11 +116,17 @@ export default function UserModal({
     }
   }, [isOpen]);
 
-  if (!token) {
-    alert("User not authenticated. Please log in.");
-    router.push("/"); // Redirect to login page
-    return;
-  }
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        alert("User not authenticated. Please log in.");
+        router.push("/"); // Redirect once
+      }
+    }
+  }, []); // empty dependency array: runs only once on mount
+
+
 
   if (!isOpen) return null;
 

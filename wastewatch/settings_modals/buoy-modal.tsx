@@ -316,7 +316,7 @@ export default function BuoyModal({
                   id="name"
                   name="name"
                   type="text"
-                  value={buoyData?.name || ""}
+                  value={buoyData?.name ?? ""}
                   onChange={(e) => {
                     setBuoyData((prev) => ({
                     ...prev,
@@ -366,7 +366,7 @@ export default function BuoyModal({
                     id="feedback"
                     name="feedback"
                     type="text"
-                    value={buoyData?.live_feed_link}
+                    value={buoyData?.live_feed_link ?? ""}
                     onChange={(e) =>
                       setBuoyData((prev) => ({
                         ...prev,
