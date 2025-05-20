@@ -1,6 +1,8 @@
 "use client";
 import { useEffect, useState } from "react";
 import Image from "next/image";
+import { useRouter } from "next/router";
+import { json } from "stream/consumers";
 
 export default function BuoyModal({
   isOpen,
@@ -12,30 +14,28 @@ export default function BuoyModal({
   const [activeSection, setActiveSection] = useState<
     "info" | "add" | "edit" | "delete"
   >("info");
+    const [buoys, setBuoys] = useState([]);
+  const [selectedBuoy, setSelectedBuoy] = useState<string>("");
   const [buoyData, setBuoyData] = useState<any>(null);
-  const [buoys, setBuoys] = useState<any[]>([]); 
-  const [buoy_id, setBuoyId] = useState<any[]>([]); // Store all buoys// Store all buoys
-  const [selectedBuoy, setSelectedBuoy] = useState<string>(""); // Track the selected buoy ID
-  const [refreshBuoys, setRefreshBuoys] = useState(false); // Trigger re-fetching of buoys
-  const [liveBuoyData, setLiveBuoyData] = useState<any>(null); // Store live buoy data
+  const [liveBuoyData, setLiveBuoyData] = useState<any>(null);
+  const [refreshBuoys, setRefreshBuoys] = useState(false);
+  const [buoyId, setBuoyId] = useState<string>("");
+  const router = useRouter();
 
   useEffect(() => {
     const fetchBuoyData = async () => {
       try {
         const res = await fetch("http://127.0.0.1:5000/buoy/", {
           method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
         });
-  
+
         if (res.ok) {
-          const response = await res.json();
-          const data = response.data;// Extract the `data` array from the response
-          setBuoys(data); // Store all buoys in state
+          const { data } = await res.json();
+          setBuoys(data);
           if (data.length > 0) {
-            setSelectedBuoy(data[0].name); // Set the first buoy's name as the default selection
-            setBuoyData(data[0]); // Set the first buoy's data as the default
+            setSelectedBuoy(data[0].name);
+            setBuoyData(data[0]);
           }
         } else {
           const error = await res.json();
@@ -45,48 +45,29 @@ export default function BuoyModal({
         console.error("Error fetching buoy data:", err);
       }
     };
-  
+
     if (isOpen || refreshBuoys) {
       fetchBuoyData();
-      setRefreshBuoys(false); // Reset the refresh trigger
+      setRefreshBuoys(false);
     }
   }, [isOpen, refreshBuoys]);
-
-  const handleBuoyChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const selectedName = e.target.value;
-    setSelectedBuoy(selectedName);
-
-    // Find the selected buoy's data by name and update the state
-    const selectedBuoyData = buoys.find((buoy) => buoy.name === selectedName);
-    setBuoyData(selectedBuoyData || null);
-
-    // Set the buoy ID separately
-    if (selectedBuoyData) {
-      setBuoyId(selectedBuoyData._id || "");
-    }
-  };
-
-  const latestLocations = buoyData?.locations
-  ?.sort((a: { date: string }, b: { date: string }) => new Date(b.date).getTime() - new Date(a.date).getTime())
-  .slice(0, 5);
 
   const fetchLiveBuoyData = async (liveFeedLink: string) => {
     if (!liveFeedLink) {
       console.error("Live feed link is not available.");
-      return;
+      return null;
     }
 
     try {
       const res = await fetch(liveFeedLink, {
         method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
       });
 
       if (res.ok) {
-        const response = await res.json();
-        setLiveBuoyData(response.data); // Set the live buoy data in state
+        const { data } = await res.json();
+        setLiveBuoyData(data);
+        return data;
       } else {
         const error = await res.json();
         console.error("Error fetching live buoy data:", error.detail);
@@ -94,116 +75,94 @@ export default function BuoyModal({
     } catch (err) {
       console.error("Error fetching live buoy data:", err);
     }
+
+    return null;
   };
 
-  const handleAddBuoy = async (e: React.FormEvent<HTMLFormElement>) => {
+  const mergeWithLiveData = (baseData: any, liveData: any) => ({
+    ...baseData,
+    battery_level: liveData?.battery_level || 0,
+    last_charged: liveData?.last_charged || "",
+    last_maintenance: liveData?.last_maintenance || "",
+    locations: liveData?.locations || [],
+  });
+
+  const handleBuoyChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const selectedName = e.target.value;
+    setSelectedBuoy(selectedName);
+
+    const selected = buoys.find((b) => b.name === selectedName);
+    if (selected) {
+      setBuoyId(selected._id || "");
+      const liveData = await fetchLiveBuoyData(selected.live_feed_link);
+      const enriched = mergeWithLiveData(selected, liveData);
+      setBuoyData(enriched);
+    } else {
+      setBuoyData(null);
+      setBuoyId("");
+      setLiveBuoyData(null);
+    }
+  };
+
+  const handleSubmitBuoy = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     const formData = new FormData(e.target as HTMLFormElement);
-    const buoyData = {
+    const baseData: any = {
       name: formData.get("name") as string,
       status: formData.get("status") as string,
-      live_feed_link: formData.get("feedback") as string, // Use live feed link from form
-      installation_date: new Date().toISOString(), // Add installation date as the current date
+      live_feed_link: formData.get("feedback") as string,
     };
 
-    // Validation: Ensure all fields are filled
-    if (!buoyData.name || !buoyData.status || !buoyData.live_feed_link) {
-      alert("All fields are required. Please fill out all fields.");
+    if (!baseData.name || !baseData.status || !baseData.live_feed_link) {
+      alert("All fields are required.");
       return;
     }
 
+    if (activeSection === "add") {
+      baseData.installation_date = new Date().toISOString();
+    }
+
     try {
-      // Fetch live buoy data using the existing method
-      await fetchLiveBuoyData(buoyData.live_feed_link);
+      const liveData = await fetchLiveBuoyData(baseData.live_feed_link);
+      const fullData = mergeWithLiveData(baseData, liveData);
 
-      // Merge live buoy data with form data
-      const completeBuoyData = {
-        ...buoyData,
-        battery_level: liveBuoyData?.battery_level || 0,
-        last_charged: liveBuoyData?.last_charged || "",
-        last_maintenance: liveBuoyData?.last_maintenance || "",
-        locations: liveBuoyData?.locations || [],
-      };
+      console.log("active section", activeSection);
+      console.log("buoy id", buoyId);
+      console.log("full data", JSON.stringify(fullData)); 
 
-      console.log("Complete buoy data:", JSON.stringify(completeBuoyData, null, 2));
-
-      // Add buoy logic
-      const res = await fetch("http://127.0.0.1:5000/buoy/", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("authToken")}`, // Add authentication token
-        },
-        body: JSON.stringify(completeBuoyData),
-      });
+      const res = await fetch(
+        `http://127.0.0.1:5000/buoy/${activeSection === "edit" ? buoyId : ""}`,
+        {
+          method: activeSection === "edit" ? "PUT" : "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+          },
+          body: JSON.stringify(fullData),
+        }
+      );
 
       if (res.ok) {
-        alert("Buoy added successfully!");
-        setRefreshBuoys(true); // Trigger re-fetching of buoys
-        onClose(); // Close the modal
+        alert(`Buoy ${activeSection === "edit" ? "updated" : "added"} successfully!`);
+        setRefreshBuoys(true);
+        onClose();
+        router.reload();
       } else {
         const error = await res.json();
         alert(`Error: ${error.detail}`);
       }
     } catch (err) {
-      console.error("Error adding buoy:", err);
-      alert("Failed to add buoy. Please try again.");
+      console.error(`Error ${activeSection === "edit" ? "editing" : "adding"} buoy:`, err);
+      alert(`Failed to ${activeSection === "edit" ? "edit" : "add"} buoy.`);
     }
   };
 
-  const handleEditBuoy = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-
-    const formData = new FormData(e.target as HTMLFormElement);
-    const buoyData = {
-      name: formData.get("name") as string,
-      status: formData.get("status") as string,
-      live_feed_link: formData.get("feedback") as string, // Use live feed link from form
-    };
-
-    try {
-      // Fetch live buoy data using the existing method
-      await fetchLiveBuoyData(buoyData.live_feed_link);
-
-      // Merge live buoy data with form data
-      const updatedBuoyData = {
-        battery_level: liveBuoyData?.battery_level || 0,
-        last_charged: liveBuoyData?.last_charged || "",
-        last_maintenance: liveBuoyData?.last_maintenance || "",
-        locations: liveBuoyData?.locations || [],
-        live_feed_link: buoyData.live_feed_link || liveBuoyData?.live_feed_link || selectedBuoy?.live_feed_link || "",
-        installation_date: buoyData.installation_date,
-        name: buoyData.name || selectedBuoy?.name || "",
-        status: buoyData.status,
-      };
-
-      console.log("selectedBuoy", selectedBuoy);
-      console.log("Updated buoy data:", JSON.stringify(updatedBuoyData, null, 2));
-
-      // Send PUT request to update buoy data
-      const res = await fetch(`http://127.0.0.1:5000/buoy/${buoy_id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("authToken")}`, // Add authentication token
-        },
-        body: JSON.stringify(updatedBuoyData),
-      });
-
-      if (res.ok) {
-        alert("Buoy updated successfully!");
-        setRefreshBuoys(true); // Trigger re-fetching of buoys
-        onClose(); // Close the modal
-      } else {
-        const error = await res.json();
-        alert(`Error: ${error.detail}`);
-      }
-    } catch (err) {
-      console.error("Error editing buoy:", err);
-      alert("Failed to edit buoy. Please try again.");
-    }
-  };
+  const latestLocations = buoyData?.locations
+    ?.sort((a: { date: string }, b: { date: string }) =>
+      new Date(b.date).getTime() - new Date(a.date).getTime()
+    )
+    .slice(0, 5);
 
   if (!isOpen) return null;
 
@@ -267,18 +226,19 @@ export default function BuoyModal({
                 <label htmlFor="name" className="font-bold min-w-[60px]">
                   Buoy Name:
                 </label>
-                <select
-                  id="name"
-                  className="flex-1 border border-black rounded px-2 py-1"
-                  value={selectedBuoy}
-                  onChange={handleBuoyChange} // Handle buoy selection change
-                >
-                  {buoys.map((buoy) => (
-                    <option key={buoy.buoy_id} value={buoy.buoy_id}>
-                      {buoy.name}
-                    </option>
-                  ))}
-                </select>
+                  <select
+                    id="name"
+                    className="flex-1 border border-black rounded px-2 py-1"
+                    value={selectedBuoy}
+                    onChange={handleBuoyChange}
+                  >
+                    {buoys.map((buoy) => (
+                      <option key={buoy._id} value={buoy.name}>
+                        {buoy.name}
+                      </option>
+                    ))}
+                  </select>
+
               </div>
               {buoyData ? (
                 <>
@@ -337,17 +297,17 @@ export default function BuoyModal({
                     id="name"
                     className="flex-1 border border-black rounded px-2 py-1"
                     value={selectedBuoy}
-                    onChange={handleBuoyChange} // Handle buoy selection change
+                    onChange={handleBuoyChange}
                   >
                     {buoys.map((buoy) => (
-                      <option key={buoy.buoy_id} value={buoy.buoy_id}>
+                      <option key={buoy._id} value={buoy.name}>
                         {buoy.name}
                       </option>
                     ))}
                   </select>
                 )}
               </div>
-              <form className="space-y-6" onSubmit={handleAddBuoy}>
+              <form className="space-y-6" onSubmit={handleSubmitBuoy}>
                 <div className="flex items-start">
                   <label htmlFor="name" className="font-bold min-w-[60px] mt-1">
                   Name:
@@ -391,7 +351,7 @@ export default function BuoyModal({
                   <select
                     id="status"
                     name="status"
-                    defaultValue={activeSection === "edit" ? (buoyData?.status ? "Active" : "Inactive") : ""}
+                    defaultValue={activeSection === "edit" ? (buoyData.status === "Inactive" ? "Inactive" : "Active") : ""}
                     className="flex-1 border border-black rounded px-2 py-1"
                   >
                     <option>Active</option>
@@ -403,18 +363,19 @@ export default function BuoyModal({
                   Live Feedback Link:
                   </label>
                   <input
-                  id="feedback"
-                  name="feedback"
-                  type="text"
-                  value={buoyData?.live_feed_link || ""}
-                  onChange={(e) => {
-                    setBuoyData((prev) => ({
-                    ...prev,
-                    live_feed_link: e.target.value,
-                    }));
-                  }}
-                  className="flex-1 border border-black rounded px-2 py-1"
+                    id="feedback"
+                    name="feedback"
+                    type="text"
+                    value={buoyData?.live_feed_link}
+                    onChange={(e) =>
+                      setBuoyData((prev) => ({
+                        ...prev,
+                        live_feed_link: e.target.value,
+                      }))
+                    }
+                    className="flex-1 border border-black rounded px-2 py-1"
                   />
+
                 </div>
                 <div className="flex justify-center py-6">
                   <button

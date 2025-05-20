@@ -108,123 +108,21 @@ export default function WasteWatchDashboard() {
             <div className="relative overflow-hidden rounded-3xl border-2 border-solid border-[#ACDCFF]">
                 <div className="relative h-[500px] overflow-hidden rounded-3xl border-2 border-[#ACDCFF] z-10">
                 {/* Use the LeafletMap component */}
-                  <LeafletMap
+                <LeafletMap
                   center={[7.0806, 125.6476]}
                   zoom={10}
                   markers={buoys.map((buoy) => ({
-                  lat: buoy.locations[buoy.locations.length - 1]?.lat || 0,
-                  long: buoy.locations[buoy.locations.length - 1]?.long || 0,
-                  name: buoy.name,
-                  status: buoy.status,
-                  batteryLevel: buoy.battery_level,
-                  lastCharged: buoy.last_charged,
-                  installationDate: buoy.installation_date,
-                  lastMaintenance: buoy.last_maintenance,
+                    lat: buoy.locations[buoy.locations.length - 1]?.lat || 0,
+                    long: buoy.locations[buoy.locations.length - 1]?.long || 0,
+                    name: buoy.name,
+                    status: buoy.status,
+                    batteryLevel: buoy.battery_level,
+                    lastCharged: buoy.last_charged,
+                    installationDate: buoy.installation_date,
+                    lastMaintenance: buoy.last_maintenance,
                   }))}
-                  />
-                </div>
-              <Image
-                src="/icons/Drone1.png"
-                alt="Drone"
-                width={32}
-                height={24}
-                className="absolute top-[40%] left-[45%] z-40"
-              />
-
-              <div className="absolute top-[40%] left-[50%] w-fit group z-40">
-                <Image
-                  src="/icons/Active.png"
-                  alt="Active Buoy"
-                  width={32}
-                  height={32}
-                  className="cursor-pointer"
                 />
-                <div className="hidden group-hover:block absolute left-8 top-0 bg-white text-black rounded-xl shadow-lg p-3 w-44 z-10">
-                  <div className="flex justify-between items-center border-b border-gray-300 pb-1 mb-2">
-                    <span className="font-bold text-sm">BUOY 1</span>
-                    <span className="text-green-500 text-sm font-semibold">
-                      Active
-                    </span>
-                  </div>
-                  <div
-                    onClick={() => (window.location.href = "/live-cam-info")}
-                    className="flex items-center mb-2 cursor-pointer hover:bg-gray-100 rounded-md"
-                  >
-                    <Image
-                      src="/icons/LiveCam.png"
-                      alt="Live Cam"
-                      width={20}
-                      height={20}
-                      className="mr-2 mb-1"
-                    />
-                    <span className="text-sm font-medium">Live Cam</span>
-                  </div>
-                  <div
-                    onClick={() => setShowModal(true)}
-                    className="flex items-center cursor-pointer hover:bg-gray-100 p-1 rounded-md"
-                  >
-                    <Image
-                      src="/icons/Details.png"
-                      alt="Details"
-                      width={16}
-                      height={16}
-                      className="mr-2"
-                    />
-                    <span className="text-sm font-medium">Details</span>
-                  </div>
                 </div>
-              </div>
-
-              {showModal && (
-                <div className="fixed inset-0 bg-black/50 flex justify-center items-center z-50">
-                  <div className="bg-white rounded-2xl p-6 w-full max-w-md relative">
-                    <button
-                      onClick={() => setShowModal(false)}
-                      className="absolute top-4 right-4 p-1.5 hover:bg-gray-200 rounded-full transition duration-150 cursor-pointer"
-                    >
-                      <Image
-                        src="/icons/Close.png"
-                        alt="Close"
-                        width={12}
-                        height={12}
-                      />
-                    </button>
-                    <h2 className="text-2xl font-bold mb-4">Details</h2>
-                    <p>
-                      <strong>Name:</strong> BUOY 1
-                    </p>
-                    <p>
-                      <strong>Status:</strong> Active
-                    </p>
-                    <p>
-                      <strong>Lat:</strong> 37.7749
-                    </p>
-                    <p>
-                      <strong>Long:</strong> 122.4194
-                    </p>
-                    <p>
-                      <strong>Installed on:</strong> April 01, 2025
-                    </p>
-                    <p>
-                      <strong>Last Maintenance:</strong> April 04, 2025
-                    </p>
-                    <p>
-                      <strong>Battery:</strong> 86%
-                    </p>
-                    <p>
-                      <strong>Last Charged:</strong> Last 4 days ago
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              <Image
-                src="/icons/Inactive.png"
-                alt="Inactive Buoy"
-                width={32}
-                height={32}
-                className="absolute top-[60%] left-[40%] z-40"
-              />
 
               {/* Legends */}
               <div className="absolute bottom-4 left-4 bg-white rounded-md px-3 py-2 text-sm text-black shadow z-20">

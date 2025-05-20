@@ -70,7 +70,7 @@ const LeafletMap: React.FC<LeafletMapProps> = ({ center, zoom, markers }) => {
                 root.render(
                     <div className="text-black text-sm space-y-2 w-30">
                       <div className="flex justify-between items-center border-b border-gray-300 pb-1">
-                        <span className="font-bold">BUOY {index + 1}</span>
+                        <span className="font-bold">{name || `BUOY ${index + 1}`}</span>
                         <span className={status === "Inactive" ? "text-red-500" : "text-green-500"}>
                           {status}
                         </span>
