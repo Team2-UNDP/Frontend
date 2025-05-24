@@ -2,6 +2,7 @@
 import React, { useRef, useState, useEffect } from "react";
 import Header from "@/components/header";
 import Image from "next/image";
+import path from "path";
 
 export default function Simulation() {
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -19,6 +20,41 @@ export default function Simulation() {
     new Map()
   );
   const toggleHistory = () => setHistoryVisible(!historyVisible);
+  interface SimulationRequest {
+    lon_start: number[];
+    lat_start: number[];
+    days_pred: number;
+  }
+
+  interface SimulationResponse {
+    path: Array<{ lat: number; lon: number; days: number}>;
+  }
+
+  async function querySimulationApi(request: SimulationRequest): Promise<SimulationResponse | null> {
+    try {
+      const response = await fetch('http://127.0.0.1:7000/simulate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(request),
+      });
+
+      // Read raw text body first
+      const rawText = await response.text();      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP error! Status: ${response.status} - ${errorText}`);
+      }
+      const results = JSON.parse(rawText);  // parse once after checking .ok
+
+      const data: SimulationResponse = JSON.parse(rawText);
+      return data;
+    } catch (error) {
+      console.error('Error querying simulation API:', error);
+      return null;
+    }
+  }
 
   useEffect(() => {
     if (typeof window === "undefined" || !mapRef.current || mapInstance) return;
@@ -78,34 +114,49 @@ export default function Simulation() {
     // Iterate over coordinates and generate paths
     const newPathsList = new Map(pathsList); // To maintain previous paths if any
 
-    coordinatesList.forEach(([lat, lng], idx) => {
-      const pathCoords = generateDummyPath(lat, lng);
-      const latLngs: [number, number][] = pathCoords.map(([lat, lng]) => [
-        lat,
-        lng,
-      ]);
+    console.log("Simulating paths for coordinates:", coordinatesList);
 
-      // Store path for the current coordinate
-      newPathsList.set(`${lat},${lng}`, latLngs);
+    coordinatesList.forEach(async ([lat, lng]) => {
+      const request: SimulationRequest = {
+        lon_start: [lng],
+        lat_start: [lat],
+        days_pred: selectedDays,
+      };
+      
+      const results = await querySimulationApi(request);
+      const pathCoords = results?.trajectory;
+      console.log("Path coordinates returned:", pathCoords);
+      if (!pathCoords || pathCoords.length === 0) {
+        console.error("No path coordinates returned from simulation.");
+        return;
+      }
 
-      // Draw path immediately for simulation
-      L.polyline(latLngs, { color: "blue" }).addTo(mapInstance);
+      pathCoords.forEach((particleTrajectory: { length: number; map: (arg0: ([lon, lat]: [any, any]) => any[]) => [number, number][]; }, index: any) => {
+        if (!particleTrajectory || particleTrajectory.length === 0) {
+          console.warn(`Particle ${index} has no coordinates.`);
+          return;
+        }
+
+        // Convert each [lon, lat] to [lat, lon] for Leaflet
+        const latLngs: [number, number][] = particleTrajectory.map(([lon, lat]) => [lat, lon]);
+
+        if (latLngs.length === 0) {
+          console.error(`Particle ${index} has no valid coordinates.`);
+          return;
+        }
+
+        // Use particle index as key or customize as needed
+        newPathsList.set(`particle_${index}`, latLngs);
+
+        // Draw polyline for this particle trajectory
+        L.polyline(latLngs, { color: "blue" }).addTo(mapInstance);
+      });
     });
 
     // Update state with new paths
     setPathsList(newPathsList);
     setHasSimulated(true);
   };
-
-  function generateDummyPath(lat: number, lng: number): [number, number][] {
-    const path: [number, number][] = [];
-    for (let i = 0; i < 5; i++) {
-      lat += (Math.random() - 0.5) * 0.01;
-      lng += (Math.random() - 0.5) * 0.01;
-      path.push([lat, lng]);
-    }
-    return path;
-  }
 
   const resetSimulation = () => {
     setCoordinatesList([]);
