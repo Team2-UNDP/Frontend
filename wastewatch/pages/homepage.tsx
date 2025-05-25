@@ -5,10 +5,6 @@ import { useRouter } from "next/router";
 import LeafletMap from "@/components/leaflet_map";
 
 export default function WasteWatchDashboard() {
-  const [coordinatesList, setCoordinatesList] = useState<[number, number][]>([]);
-  const [selectedDays, setSelectedDays] = useState<number | null>(null);
-  const [historyVisible, setHistoryVisible] = useState(false);
-  const [showModal, setShowModal] = useState(false);
   const [isSignedIn, setIsSignedIn] = useState(false);
 
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -20,6 +16,24 @@ export default function WasteWatchDashboard() {
   const [loading, setLoading] = useState(true);
   const router = useRouter();
   const [buoys, setBuoys] = useState<any[]>([]); // Store buoy data, initialized as an empty array
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const getBuoyName = createBuoyNameLookup(buoys);
+
+  type TrashCount = {
+    small_count: number;
+    medium_count: number;
+    heavy_count: number;
+  };
+
+  type Notification = {
+    _id: string;
+    detection_type: string;
+    buoy_id: string;
+    timestamp: string;
+    trash_count: TrashCount[];
+    time_window: string;
+    last_detection_id: string | null;
+  };
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -57,7 +71,23 @@ export default function WasteWatchDashboard() {
     };
 
     verifyUser();
+  }, [router]);
+
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      try {
+        const res = await fetch("http://127.0.0.1:5000/notification/");
+        const data = await res.json();
+        console.log("Notifications data:", data.data);
+        setNotifications(data.data); // assuming your backend returns { data: [...] }
+      } catch (error) {
+        console.error("Failed to fetch notifications", error);
+      }
+    };
+
+    fetchNotifications();
   }, []);
+
 
   // Fetch buoy data
   useEffect(() => {
@@ -88,6 +118,15 @@ export default function WasteWatchDashboard() {
 
     fetchBuoys();
   }, []);
+
+  // Accepts the buoys array, returns a function to get buoy name by ID
+  function createBuoyNameLookup(buoys: { _id: string; name: string }[]) {
+    // Build a Map for fast lookup
+    const buoyMap = new Map(buoys.map(b => [b._id, b.name]));
+
+    // Return a function that takes an ID and returns the name or the ID if not found
+    return (id: string) => buoyMap.get(id) ?? id;
+  }
 
   return (
     <div className="font-poppins bg-ocean-gradient min-h-screen">
@@ -231,41 +270,48 @@ export default function WasteWatchDashboard() {
                 </div>
               </div>
 
-              <div className="mt-4 space-y-4 bg-white p-5 rounded-2xl">
-                {[1, 2, 3].map((item, idx) => (
-                  <div
-                    key={idx}
-                    className="bg-white p-4 rounded-lg shadow flex items-center justify-between border border-black"
-                  >
-                    <div className="flex items-center gap-2">
-                      <Image
-                        src="/icons/BuoyDark.png"
-                        width={20}
-                        height={20}
-                        alt="Buoy"
-                      />
-                      <div>
-                        <p className="font-bold text-sm">BUOY 1</p>
-                        <p className="text-xs text-gray-600">
-                          {idx % 2 === 0
-                            ? "Trash Detected"
-                            : "Accumulation Detected"}
-                        </p>
+              <div className="mt-4 bg-white p-5 rounded-2xl">
+                <div className="space-y-4 max-h-64 overflow-y-auto pr-2">
+                  {notifications.map((item, idx) => (
+                    <div
+                      key={item._id}
+                      className="bg-white p-4 rounded-lg shadow flex items-center justify-between border border-black"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Image
+                          src="/icons/BuoyDark.png"
+                          width={20}
+                          height={20}
+                          alt="Buoy"
+                        />
+                        <div>
+                          <p className="font-bold text-sm">{getBuoyName(item.buoy_id)}</p>
+                          <p className="text-xs text-gray-600">
+                            {item.detection_type === "sustain_alert"
+                              ? "Accumulation Detected"
+                              : "Trash Detected"}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {(item.trash_count?.heavy_count || 0) > 5 && (
+                          <span className="w-2 h-2 bg-red-500 rounded-full"></span>
+                        )}
+                        <span className="text-xs text-gray-500">
+                          {new Date(item.timestamp).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      {idx === 0 && (
-                        <span className="w-2 h-2 bg-red-500 rounded-full"></span>
-                      )}
-                      <span className="text-xs text-gray-500">6:53 pm</span>
-                    </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
 
               {modalOpen && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-                  <div className="bg-white rounded-2xl shadow-lg w-fit max-w-fit p-6 h-[400px] relative overflow-auto flex flex-col custom-scroll scroll-smooth">
+                  <div className="bg-white rounded-2xl shadow-lg w-fit max-w-fit p-6 relative flex flex-col custom-scroll scroll-smooth">
                     <div className="sticky top-0 z-10 bg-white pb-2">
                       <h3 className="text-xl font-bold">Notification Details</h3>
                       <h3 className="text-sm text-[#848484]">Today</h3>
@@ -281,10 +327,12 @@ export default function WasteWatchDashboard() {
                         />
                       </button>
                     </div>
-                    <div className="space-y-3">
-                      {[1, 2, 3, 4, 5].map((num) => (
+
+                    {/* Notification List */}
+                    <div className="space-y-3 overflow-y-auto" style={{ maxHeight: 'calc(400px - 64px)' }}>
+                      {notifications.map((item, idx) => (
                         <div
-                          key={num}
+                          key={item._id}
                           className="grid grid-cols-3 gap-4 py-3 border border-gray-200 rounded-md px-5 items-center"
                         >
                           <div className="flex items-center gap-1">
@@ -294,26 +342,28 @@ export default function WasteWatchDashboard() {
                               width={20}
                               height={20}
                             />
-                            <p className="text-sm font-medium">BUOY {num}</p>
+                            <p className="text-sm font-medium">{getBuoyName(item.buoy_id)}</p>
                           </div>
                           <p className="text-sm text-left text-[#B70000] font-medium">
-                            {num === 1
-                              ? "Trash Detected"
-                              : "Accumulation Detected"}
+                            {item.detection_type === "sustain_alert"
+                              ? "Accumulation Detected"
+                              : "Trash Detected"}
                           </p>
                           <p className="text-sm text-right ml-10">
-                            April 17, 2025 - 6:53 PM
+                            {new Date(item.timestamp).toLocaleString("en-US", {
+                              month: "long",
+                              day: "numeric",
+                              year: "numeric",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
                           </p>
                         </div>
                       ))}
                     </div>
-                    <div className="flex justify-center mt-6">
-                      <button className="bg-[#203F5A] text-white text-sm px-16 py-2 rounded-full hover:underline hover:bg-[#304b62] transition-all">
-                        See Previous Notifications
-                      </button>
-                    </div>
                   </div>
                 </div>
+
               )}
             </section>
 
