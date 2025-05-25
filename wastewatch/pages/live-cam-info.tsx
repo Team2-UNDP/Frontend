@@ -1,8 +1,50 @@
 // pages/live-cam.js
 import Image from "next/image";
 import Header from "@/components/header";
+import { useEffect, useState } from "react";
 
-const LiveCam = () => {
+
+export default function LiveCam () {
+
+  const [time, setTime] = useState("");
+  const [date, setDate] = useState("");
+  const [buoyCam, setBuoyCam] = useState<string | null>(null);
+
+  useEffect(() => {
+    const updateTime = () => {
+      const now = new Date();
+
+      const formattedTime = now.toLocaleTimeString("en-US", {
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+      });
+
+      const formattedDate = now.toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "2-digit",
+      });
+
+      setTime(formattedTime.toLowerCase()); // e.g., 8:59 pm
+      setDate(formattedDate); // e.g., March 03, 2025
+    };
+
+    updateTime(); // initialize
+    const interval = setInterval(updateTime, 1000); // update every second
+
+    return () => clearInterval(interval); // cleanup
+  }, []);
+
+  useEffect(() => {
+    const storedBuoyCam = localStorage.getItem("selectedBuoy");
+    if (storedBuoyCam) {
+      const decodedBuoy = decodeURIComponent(storedBuoyCam);
+      const parsedBuoy = JSON.parse(decodedBuoy);
+      setBuoyCam(parsedBuoy);
+    }
+  }, []);  // Run only once on mount
+
   return (
     <div className="font-poppins bg-gradient-to-br from-[#065C7C] to-[#0C2E3F]">
       <Header />
@@ -22,7 +64,7 @@ const LiveCam = () => {
                 height={40}
               />
               <h2 className="text-3xl font-bold text-white">
-                LIVE CAM - BUOY 1
+                LIVE CAM - {}
               </h2>
             </div>
             <Image
@@ -37,11 +79,11 @@ const LiveCam = () => {
               <strong>Details:</strong>
             </p>
             <div className="grid grid-cols-2 text-base text-white">
-              <p>Name: Buoy 1</p>
-              <p>Time: 8:59 pm</p>
+              <p>Name: {buoyCam?.name}</p>
+              <p>Time: {time}</p>
               <p>Resolution: 1080p</p>
-              <p>Date: March 03, 2025</p>
-              <p>IP: 1223.3213.3231</p>
+              <p>Date: {date}</p>
+              <p>IP: {buoyCam?.address}</p>
             </div>
           </div>
 
@@ -103,4 +145,3 @@ const LiveCam = () => {
   );
 };
 
-export default LiveCam;

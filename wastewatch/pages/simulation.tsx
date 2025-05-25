@@ -2,11 +2,8 @@
 import React, { useRef, useState, useEffect } from "react";
 import Header from "@/components/header";
 import Image from "next/image";
-import path from "path";
 
 export default function Simulation() {
-  const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [modalOpen, setModalOpen] = useState(false);
   const [mapInstance, setMapInstance] = useState<any>(null);
   const [coordinatesList, setCoordinatesList] = useState<[number, number][]>(
     []
@@ -19,6 +16,8 @@ export default function Simulation() {
   const [pathsList, setPathsList] = useState<Map<string, [number, number][]>>(
     new Map()
   );
+  const [data, setData] = useState<SimulationData[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const toggleHistory = () => setHistoryVisible(!historyVisible);
   interface SimulationRequest {
     lon_start: number[];
@@ -29,6 +28,18 @@ export default function Simulation() {
   interface SimulationResponse {
     path: Array<{ lat: number; lon: number; days: number}>;
   }
+
+  type SimulationData = {
+    _id: string;
+    user_id: string;
+    lat: [number, number];
+    long: [number, number];
+    timestamp: string;
+    num_days: number;
+    predicted_lat: number[][];
+    predicted_long: number[][];
+  };
+  
 
   async function querySimulationApi(request: SimulationRequest): Promise<SimulationResponse | null> {
     try {
@@ -46,7 +57,6 @@ export default function Simulation() {
         const errorText = await response.text();
         throw new Error(`HTTP error! Status: ${response.status} - ${errorText}`);
       }
-      const results = JSON.parse(rawText);  // parse once after checking .ok
 
       const data: SimulationResponse = JSON.parse(rawText);
       return data;
@@ -82,7 +92,7 @@ export default function Simulation() {
         const customIcon = L.icon({
           iconUrl: "/icons/Coordinate.png",
           iconSize: [16, 18],
-          iconAnchor: [16, 32],
+          iconAnchor: [8, 16],
           popupAnchor: [0, -32],
         });
 
@@ -104,59 +114,88 @@ export default function Simulation() {
       hasSimulated
     ) {
       if (hasSimulated) alert("Simulation already started.");
-      else
-        alert("Please select coordinates and a day value before simulating.");
+      else alert("Please select coordinates and a day value before simulating.");
       return;
     }
 
     const L = (await import("leaflet")).default;
+    const newPathsList = new Map(pathsList);
 
-    // Iterate over coordinates and generate paths
-    const newPathsList = new Map(pathsList); // To maintain previous paths if any
+    const lat_start: number[] = [];
+    const lon_start: number[] = [];
+    const predicted_lat: number[][] = [];
+    const predicted_long: number[][] = [];
 
-    console.log("Simulating paths for coordinates:", coordinatesList);
+    for (const [lat, lng] of coordinatesList) {
+      lat_start.push(lat);
+      lon_start.push(lng);
 
-    coordinatesList.forEach(async ([lat, lng]) => {
       const request: SimulationRequest = {
-        lon_start: [lng],
         lat_start: [lat],
+        lon_start: [lng],
         days_pred: selectedDays,
       };
-      
+
       const results = await querySimulationApi(request);
       const pathCoords = results?.trajectory;
-      console.log("Path coordinates returned:", pathCoords);
-      if (!pathCoords || pathCoords.length === 0) {
-        console.error("No path coordinates returned from simulation.");
-        return;
+
+      if (!pathCoords || pathCoords.length === 0) continue;
+
+      pathCoords.forEach((particleTrajectory: { map: (arg0: ([lon, lat]: [number, number]) => number[]) => [number, number][]; }, index: any) => {
+        const latLngs: [number, number][] = particleTrajectory.map(
+          ([lon, lat]: [number, number]) => [lat, lon]
+        );
+
+        newPathsList.set(`particle_${index}`, latLngs);
+        L.polyline(latLngs, { color: "blue" }).addTo(mapInstance);
+
+        const latList = latLngs.map(([lat]) => lat);
+        const lngList = latLngs.map(([, lng]) => lng);
+
+        predicted_lat.push(latList);
+        predicted_long.push(lngList);
+      });
+    }
+
+    //Final payload as per backend requirement
+    const simulationPayload = {
+      lat: lat_start,
+      long: lon_start,
+      num_days: selectedDays,
+      predicted_lat,
+      predicted_long,
+    };
+
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      console.error("No token found in localStorage");
+      return;
+    }
+
+    try {
+      const response = await fetch("http://127.0.0.1:5000/simulation/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`, 
+        },
+        body: JSON.stringify(simulationPayload),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to save simulation");
       }
 
-      pathCoords.forEach((particleTrajectory: { length: number; map: (arg0: ([lon, lat]: [any, any]) => any[]) => [number, number][]; }, index: any) => {
-        if (!particleTrajectory || particleTrajectory.length === 0) {
-          console.warn(`Particle ${index} has no coordinates.`);
-          return;
-        }
+      console.log("Simulation saved successfully!");
+    } catch (error) {
+      console.error("Error saving simulation:", error);
+    }
 
-        // Convert each [lon, lat] to [lat, lon] for Leaflet
-        const latLngs: [number, number][] = particleTrajectory.map(([lon, lat]) => [lat, lon]);
-
-        if (latLngs.length === 0) {
-          console.error(`Particle ${index} has no valid coordinates.`);
-          return;
-        }
-
-        // Use particle index as key or customize as needed
-        newPathsList.set(`particle_${index}`, latLngs);
-
-        // Draw polyline for this particle trajectory
-        L.polyline(latLngs, { color: "blue" }).addTo(mapInstance);
-      });
-    });
-
-    // Update state with new paths
     setPathsList(newPathsList);
     setHasSimulated(true);
   };
+
 
   const resetSimulation = () => {
     setCoordinatesList([]);
@@ -174,55 +213,23 @@ export default function Simulation() {
     }
   };
 
-  const showHistoryOnMap = async () => {
-    if (!mapInstance || historyList.length === 0) return;
-
-    const L = (await import("leaflet")).default;
-
-    // Clear existing markers and polylines
-    mapInstance.eachLayer((layer: any) => {
-      if (layer instanceof L.Marker || layer instanceof L.Polyline) {
-        mapInstance.removeLayer(layer);
+  useEffect(() => {
+    const fetchSimulation = async () => {
+      try {
+        const response = await fetch('http://127.0.0.1:5000/simulation/');
+        if (!response.ok) {
+          throw new Error(`Error: ${response.status}`);
+        }
+        const result: SimulationData[] = await response.json();
+        setData(result.data);
+        console.log("Fetched simulation data:", result.data);
+      } catch (err) {
+        setError((err as Error).message);
       }
-    });
+    };
 
-    // Add markers and draw paths from the stored paths in pathsList
-    historyList.forEach(([lat, lng], index) => {
-      // Create a marker for each coordinate
-      const customIcon = L.icon({
-        iconUrl: "/icons/Coordinate.png",
-        iconSize: [16, 18],
-        iconAnchor: [16, 32],
-        popupAnchor: [0, -32],
-      });
-
-      const marker = L.marker([lat, lng], { icon: customIcon }).addTo(
-        mapInstance
-      );
-
-      // Get the stored path for the current coordinate
-      const pathSegment = pathsList.get(`${lat},${lng}`);
-
-      if (pathSegment) {
-        // Draw the original path
-        L.polyline(pathSegment, { color: "blue" }).addTo(mapInstance);
-      }
-    });
-
-    // Restore coordinates list for continued simulation
-    setCoordinatesList(historyList);
-  };
-
-  const now = new Date();
-  const dateStr = now.toLocaleDateString("en-GB");
-  const timeStr = now.toLocaleTimeString([], {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-
-  const coordStr = historyList
-    .map(([lat, lng]) => `${lat.toFixed(4)}, ${lng.toFixed(4)}`)
-    .join("; ");
+    fetchSimulation();
+  }, []);
 
   return (
     <div className="font-poppins bg-gradient-to-br from-[#065C7C] to-[#0C2E3F] min-h-screen">
@@ -339,7 +346,7 @@ export default function Simulation() {
         </aside>
       </div>
 
-      {historyVisible && (
+      {historyVisible && data && (
         <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
           <div className="bg-white rounded-xl p-6 max-w-2xl w-full overflow-y-auto max-h-[80vh]">
             <div className="flex justify-between items-center mb-4">
@@ -356,25 +363,51 @@ export default function Simulation() {
                 />
               </button>
             </div>
-            <div
-              className="rounded-xl p-4 shadow-[0px_0px_10px_rgba(0,0,0,0.4)] space-y-1 cursor-pointer hover:bg-gray-100 transition"
-              onClick={showHistoryOnMap}
-            >
-              <div className="flex justify-between items-center">
-                <p className="font-semibold">{dateStr}</p>
-                <span className="text-sm">{timeStr}</span>
-              </div>
-              <p className="text-sm text-gray-700">
-                {historyList.length} coordinate
-                {historyList.length > 1 ? "s" : ""} selected
-              </p>
-              <p className="text-sm">
-                <span className="font-bold">Coordinates:</span> {coordStr}
-              </p>
-            </div>
+
+            {data.map((item) => {
+              const dateObj = new Date(item.timestamp);
+              const dateStr = dateObj.toLocaleDateString();
+              const timeStr = dateObj.toLocaleTimeString();
+
+              // Flatten predicted coordinates for display
+              const coords = item.predicted_lat.map((latArr, i) =>
+                latArr.map((lat, j) => `(${lat.toFixed(3)}, ${item.predicted_long[i][j].toFixed(3)})`)
+              ).flat();
+
+              const coordStr = coords.join(", ");
+
+              return (
+                <div
+                  key={item._id}
+                  className="rounded-xl p-4 shadow-[0px_0px_10px_rgba(0,0,0,0.4)] space-y-1 cursor-pointer hover:bg-gray-100 transition mb-4"
+                >
+                  <div className="flex justify-between items-center">
+                    <p className="font-semibold">{dateStr}</p>
+                    <span className="text-sm">{timeStr}</span>
+                  </div>
+
+                  <p className="text-sm">
+                    <span className="font-bold">Origin:</span> Lat: {item.lat.join(', ')}, Long: {item.long.join(', ')}
+                  </p>
+
+                  <p className="text-sm">
+                    <span className="font-bold">Days Simulated:</span> {item.num_days}
+                  </p>
+
+                  <p className="text-sm text-gray-700">
+                    {coords.length} coordinate{coords.length > 1 ? "s" : ""}
+                  </p>
+
+                  <p className="text-sm max-h-16 overflow-y-auto">
+                    <span className="font-bold">Coordinates:</span> {coordStr}
+                  </p>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
+
     </div>
   );
 }

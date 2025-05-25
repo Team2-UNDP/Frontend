@@ -3,6 +3,7 @@ import Image from "next/image";
 import "leaflet/dist/leaflet.css";
 import BuoyDetailsModal from "./buoy-detail-modal";
 import { createRoot } from "react-dom/client";
+import router from "next/router";
 
 interface MarkerData {
     lat: number;
@@ -14,6 +15,7 @@ interface MarkerData {
     installationDate?: string;
     lastMaintenance?: string;
     popupText?: string;
+    address?: string;
 }
 
 interface LeafletMapProps {
@@ -46,7 +48,9 @@ const LeafletMap: React.FC<LeafletMapProps> = ({ center, zoom, markers }) => {
                 }
             });
 
-            markers.forEach(({ lat, long, name, status, batteryLevel, lastCharged, installationDate, lastMaintenance }, index) => {
+            markers.forEach((markerItem, index) => {
+                const { lat, long, name, status, batteryLevel, lastCharged, installationDate, lastMaintenance } = markerItem;
+
                 const customIcon = L.divIcon({
                     html: `
                     <div class="custom-marker cursor-pointer">
@@ -57,10 +61,10 @@ const LeafletMap: React.FC<LeafletMapProps> = ({ center, zoom, markers }) => {
                     `,
                     className: "custom-marker",
                     iconSize: [32, 32],
-                    iconAnchor: [16, 32],
+                    iconAnchor: [0, 16],
                 });
             
-                const marker = L.marker([lat, long], { icon: customIcon }).addTo(mapInstanceRef.current);
+                const marker = L.marker([markerItem.lat, markerItem.long], { icon: customIcon }).addTo(mapInstanceRef.current);
             
                 // Create popup container
                 const popupContainer = document.createElement("div");
@@ -70,7 +74,7 @@ const LeafletMap: React.FC<LeafletMapProps> = ({ center, zoom, markers }) => {
                 root.render(
                     <div className="text-black text-sm space-y-2 w-30">
                       <div className="flex justify-between items-center border-b border-gray-300 pb-1">
-                        <span className="font-bold">{name || `BUOY ${index + 1}`}</span>
+                        <span className="font-bold">{markerItem.name || `BUOY ${index + 1}`}</span>
                         <span className={status === "Inactive" ? "text-red-500" : "text-green-500"}>
                           {status}
                         </span>
@@ -108,13 +112,15 @@ const LeafletMap: React.FC<LeafletMapProps> = ({ center, zoom, markers }) => {
                         const detailsButton = document.getElementById(`details-${index}`);
             
                         liveCamButton?.addEventListener("click", () => {
-                            window.location.href = "/live-cam-info";
+                            const encodedBuoy = encodeURIComponent(JSON.stringify(markerItem));
+                            localStorage.setItem("selectedBuoy", encodedBuoy);
+                            router.push("/live-cam-info");
                         });
             
                         detailsButton?.addEventListener("click", () => {
                             setSelectedBuoy({
-                                lat,
                                 long,
+                                lat,
                                 name,
                                 status,
                                 batteryLevel,

@@ -120,6 +120,7 @@ export default function WasteWatchDashboard() {
                     lastCharged: buoy.last_charged,
                     installationDate: buoy.installation_date,
                     lastMaintenance: buoy.last_maintenance,
+                    address: buoy.live_feed_link,
                   }))}
                 />
                 </div>
