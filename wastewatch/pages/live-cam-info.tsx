@@ -67,14 +67,15 @@ export default function LiveCam () {
                 LIVE CAM - {}
               </h2>
             </div>
-            <Image
-              src="/images/Trash1.png"
-              alt="Live Feed"
-              className="rounded-lg"
-              width={800}
-              height={400}
-            />
-
+            <iframe
+              src="http://192.168.1.3:9000"
+              title="Live Feed HTML Content"
+              width="800"
+              height="400"
+              className="rounded-lg" // You might need to adjust styling for iframe
+              style={{ border: 'none' }} // Remove default iframe border
+            ></iframe>
+ 
             <p className="text-white text-xl mt-4">
               <strong>Details:</strong>
             </p>
