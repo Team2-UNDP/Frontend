@@ -1,5 +1,4 @@
 import React, { useEffect, useRef, useState } from "react";
-import Image from "next/image";
 import "leaflet/dist/leaflet.css";
 import BuoyDetailsModal from "./buoy-detail-modal";
 import { createRoot } from "react-dom/client";

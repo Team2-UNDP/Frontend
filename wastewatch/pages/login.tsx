@@ -26,11 +26,12 @@ export default function Home() {
     e.preventDefault();
 
     try {
-      const res = await fetch("https://backend-production-f2bb.up.railway.app/user/login", {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND}/user/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
+        credentials: "include", // only needed if backend sets cookies
         body: JSON.stringify({ username, password }),
       });
 
