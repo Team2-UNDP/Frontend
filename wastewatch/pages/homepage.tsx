@@ -46,7 +46,7 @@ export default function WasteWatchDashboard() {
 
     const verifyUser = async () => {
       try {
-        const res = await fetch("http://127.0.0.1:5000/user/me", {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND}/user/me`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();
@@ -55,7 +55,6 @@ export default function WasteWatchDashboard() {
           localStorage.setItem("user_info", JSON.stringify(data));
           setIsSignedIn(true);
         } else {
-          console.log(data);
           setIsSignedIn(false);
           localStorage.removeItem("token");
           router.push("/");
@@ -76,9 +75,8 @@ export default function WasteWatchDashboard() {
   useEffect(() => {
     const fetchNotifications = async () => {
       try {
-        const res = await fetch("http://127.0.0.1:5000/notification/");
+        const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND}/notification/`);
         const data = await res.json();
-        console.log("Notifications data:", data.data);
         setNotifications(data.data); // assuming your backend returns { data: [...] }
       } catch (error) {
         console.error("Failed to fetch notifications", error);
@@ -93,7 +91,7 @@ export default function WasteWatchDashboard() {
   useEffect(() => {
     const fetchBuoys = async () => {
       try {
-        const res = await fetch("http://127.0.0.1:5000/buoy", {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND}/buoy/`, {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
