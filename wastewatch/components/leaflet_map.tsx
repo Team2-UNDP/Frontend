@@ -7,6 +7,7 @@ import router from "next/router";
 interface MarkerData {
     lat: number;
     long: number;
+    id?: string;
     name?: string;
     status?: string;
     batteryLevel?: string;
@@ -48,7 +49,7 @@ const LeafletMap: React.FC<LeafletMapProps> = ({ center, zoom, markers }) => {
             });
 
             markers.forEach((markerItem, index) => {
-                const { lat, long, name, status, batteryLevel, lastCharged, installationDate, lastMaintenance } = markerItem;
+                const { lat, long, id, name, status, batteryLevel, lastCharged, installationDate, lastMaintenance } = markerItem;
 
                 const customIcon = L.divIcon({
                     html: `
@@ -120,6 +121,7 @@ const LeafletMap: React.FC<LeafletMapProps> = ({ center, zoom, markers }) => {
                             setSelectedBuoy({
                                 long,
                                 lat,
+                                id,
                                 name,
                                 status,
                                 batteryLevel,

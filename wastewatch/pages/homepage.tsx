@@ -77,7 +77,7 @@ export default function WasteWatchDashboard() {
       try {
         const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND}/notification/`);
         const data = await res.json();
-        setNotifications(data.data); // assuming your backend returns { data: [...] }
+        setNotifications(data.data);
       } catch (error) {
         console.error("Failed to fetch notifications", error);
       }
@@ -151,6 +151,7 @@ export default function WasteWatchDashboard() {
                   markers={buoys.map((buoy) => ({
                     lat: buoy.locations[buoy.locations.length - 1]?.lat || 0,
                     long: buoy.locations[buoy.locations.length - 1]?.long || 0,
+                    id: buoy._id,
                     name: buoy.name,
                     status: buoy.status,
                     batteryLevel: buoy.battery_level,
@@ -292,7 +293,7 @@ export default function WasteWatchDashboard() {
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        {(item.trash_count?.heavy_count || 0) > 5 && (
+                        {(item.trash_count?.[0]?.heavy_count || 0) > 5 && (
                           <span className="w-2 h-2 bg-red-500 rounded-full"></span>
                         )}
                         <span className="text-xs text-gray-500">

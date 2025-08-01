@@ -2,6 +2,7 @@
 import Image from "next/image";
 import Header from "@/components/header";
 import { useEffect, useState } from "react";
+import { json } from "stream/consumers";
 
 
 export default function LiveCam () {
@@ -9,6 +10,7 @@ export default function LiveCam () {
   const [time, setTime] = useState("");
   const [date, setDate] = useState("");
   const [buoyCam, setBuoyCam] = useState<string | null>(null);
+  const [notifications, setNotifications] = useState([]);
 
   useEffect(() => {
     const updateTime = () => {
@@ -44,6 +46,29 @@ export default function LiveCam () {
       setBuoyCam(parsedBuoy);
     }
   }, []);  // Run only once on mount
+
+  // 🔄 Fetch notifications for the selected buoy
+  useEffect(() => {
+    if (!buoyCam?.id) return;
+
+    const fetchNotifications = async () => {
+      try {
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_BACKEND}/notification/notification_buoy/${buoyCam.id}`
+        );
+        if (res.ok) {
+          const data = await res.json();
+          setNotifications(data.data);
+        } else {
+          console.error("Failed to fetch buoy notifications");
+        }
+      } catch (err) {
+        console.error("Error fetching notifications:", err);
+      }
+    };
+
+    fetchNotifications();
+  }, [buoyCam]);
 
   return (
     <div className="font-poppins bg-gradient-to-br from-[#065C7C] to-[#0C2E3F]">
@@ -88,7 +113,7 @@ export default function LiveCam () {
             </div>
           </div>
 
-          {/* Right: Details / Detection Section */}
+          {/* 📋 Right: Detection Cards */}
           <div className="flex flex-col overflow-auto h-[900px]">
             <div className="flex flex-row">
               <h3 className="text-3xl text-white font-bold mb-4">Details</h3>
@@ -105,44 +130,52 @@ export default function LiveCam () {
                 />
               </button>
             </div>
+
             <div className="w-fit bg-[#FFFFFF] rounded-xl p-4 overflow-y-auto h-fit">
-              {/* Detection Cards */}
-              <div className="space-y-4">
-                {[1, 2, 3].map((item) => (
-                  <div
-                    key={item}
-                    className="bg-[#E5ECF1] drop-shadow-md rounded-lg shadow p-3 flex flex-row"
-                  >
-                    <Image
-                      src={`/images/Trash${item}.png`}
-                      alt="Detection"
-                      className="w-96 h-64 rounded mb-2"
-                      width={384}
-                      height={256}
-                    />
-                    <div className="flex flex-col ml-6 space-y-2">
-                      <h3 className="text-lg font-bold">
-                        Accumulation Detected!
-                      </h3>
-                      <p className="text-lg">
-                        <strong>Volume:</strong> Heavy
-                      </p>
-                      <p className="text-lg">
-                        <strong>Confidence:</strong> 91%
-                      </p>
-                      <div className="text-base pt-20 text-[#434343]">
-                        <p>10/10/25</p>
-                        <p>24-12-01 14:30:00</p>
-                      </div>
-                    </div>
+                  <div className="space-y-4">
+                    {notifications.length === 0 ? (
+                      <p className="text-black text-sm">No recent detections found.</p>
+                    ) : (
+                      notifications.map((notif) => (
+                        <div
+                          key={notif._id}
+                          className="bg-[#E5ECF1] drop-shadow-md rounded-lg shadow p-3 flex flex-row"
+                        >
+                          <Image
+                            src={`/images/Trash1.png`}
+                            alt="Detection"
+                            className="w-96 h-64 rounded mb-2"
+                            width={384}
+                            height={256}
+                          />
+                          <div className="flex flex-col ml-6 space-y-2">
+                            <h3 className="text-lg font-bold">
+                              {notif.detection_type === "sustain_alert"
+                                ? "Accumulation Detected!"
+                                : "Trash Detected!"}
+                            </h3>
+                            <p className="text-lg">
+                              <strong>Volume:</strong>{" "}
+                              {(notif.trash_count?.[0]?.heavy_count || 0) > 5
+                                ? "Heavy"
+                                : "Light"}
+                            </p>
+                            <p className="text-lg">
+                              <strong>Confidence:</strong> 91%
+                            </p>
+                            <div className="text-base pt-20 text-[#434343]">
+                              <p>{new Date(notif.timestamp).toLocaleDateString()}</p>
+                              <p>{new Date(notif.timestamp).toLocaleTimeString()}</p>
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    )}
                   </div>
-                ))}
-              </div>
-            </div>
+                </div>
           </div>
         </div>
       </div>
     </div>
   );
-};
-
+}

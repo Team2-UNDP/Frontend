@@ -17,7 +17,6 @@ export default function BuoyModal({
     const [buoys, setBuoys] = useState([]);
   const [selectedBuoy, setSelectedBuoy] = useState<string>("");
   const [buoyData, setBuoyData] = useState<any>(null);
-  const [liveBuoyData, setLiveBuoyData] = useState<any>(null);
   const [refreshBuoys, setRefreshBuoys] = useState(false);
   const [buoyId, setBuoyId] = useState<string>("");
   const router = useRouter();
@@ -36,6 +35,7 @@ export default function BuoyModal({
           if (data.length > 0) {
             setSelectedBuoy(data[0].name);
             setBuoyData(data[0]);
+            setBuoyId(data[0]._id);
           }
         } else {
           const error = await res.json();
@@ -52,63 +52,11 @@ export default function BuoyModal({
     }
   }, [isOpen, refreshBuoys]);
 
-  const fetchLiveBuoyData = async (liveFeedLink: string) => {
-    if (!liveFeedLink) {
-      console.error("Live feed link is not available.");
-      return null;
-    }
-
-    try {
-      const res = await fetch(liveFeedLink, {
-        method: "GET",
-        headers: { "Content-Type": "application/json" },
-      });
-
-      if (res.ok) {
-        const { data } = await res.json();
-        setLiveBuoyData(data);
-        return data;
-      } else {
-        const error = await res.json();
-        console.error("Error fetching live buoy data:", error.detail);
-      }
-    } catch (err) {
-      console.error("Error fetching live buoy data:", err);
-    }
-
-    return null;
-  };
-
-  const mergeWithLiveData = (baseData: any, liveData: any) => ({
-    ...baseData,
-    battery_level: liveData?.battery_level || 0,
-    last_charged: liveData?.last_charged || "",
-    last_maintenance: liveData?.last_maintenance || "",
-    locations: liveData?.locations || [],
-  });
-
-  const handleBuoyChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const selectedName = e.target.value;
-    setSelectedBuoy(selectedName);
-
-    const selected = buoys.find((b) => b.name === selectedName);
-    if (selected) {
-      setBuoyId(selected._id || "");
-      const liveData = await fetchLiveBuoyData(selected.live_feed_link);
-      const enriched = mergeWithLiveData(selected, liveData);
-      setBuoyData(enriched);
-    } else {
-      setBuoyData(null);
-      setBuoyId("");
-      setLiveBuoyData(null);
-    }
-  };
-
   const handleSubmitBuoy = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     const formData = new FormData(e.target as HTMLFormElement);
-    const baseData: any = {
+    const baseData = {
       name: formData.get("name") as string,
       status: formData.get("status") as string,
       live_feed_link: formData.get("feedback") as string,
@@ -124,22 +72,15 @@ export default function BuoyModal({
     }
 
     try {
-      const liveData = await fetchLiveBuoyData(baseData.live_feed_link);
-      const fullData = mergeWithLiveData(baseData, liveData);
-
-      console.log("active section", activeSection);
-      console.log("buoy id", buoyId);
-      console.log("full data", JSON.stringify(fullData)); 
-
       const res = await fetch(
-        `http://127.0.0.1:5000/buoy/${activeSection === "edit" ? buoyId : ""}`,
+        `${process.env.NEXT_PUBLIC_BACKEND}/buoy/${activeSection === "edit" ? buoyId : ""}`,
         {
           method: activeSection === "edit" ? "PUT" : "POST",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${localStorage.getItem("authToken")}`,
           },
-          body: JSON.stringify(fullData),
+          body: JSON.stringify(baseData),
         }
       );
 
@@ -155,6 +96,20 @@ export default function BuoyModal({
     } catch (err) {
       console.error(`Error ${activeSection === "edit" ? "editing" : "adding"} buoy:`, err);
       alert(`Failed to ${activeSection === "edit" ? "edit" : "add"} buoy.`);
+    }
+  };
+
+  const handleBuoyChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const selectedName = e.target.value;
+    setSelectedBuoy(selectedName);
+
+    const selected = buoys.find((b) => b.name === selectedName);
+    if (selected) {
+      setBuoyData(selected);
+      setBuoyId(selected._id || "");
+    } else {
+      setBuoyData(null);
+      setBuoyId("");
     }
   };
 

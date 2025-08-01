@@ -5,6 +5,7 @@ interface BuoyDetailsModalProps {
   isOpen: boolean;
   onClose: () => void;
   buoyData: {
+    id: string;
     name: string;
     status: string;
     lat: number;

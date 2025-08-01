@@ -53,8 +53,3 @@ app.post("/login", async (req, res) => {
     res.status(401).json({ success: false, message: "Invalid credentials" });
   }
 });
-
-// Start the server
-app.listen(PORT, () => {
-  console.log(`Backend server running on http://localhost:${PORT}`);
-});

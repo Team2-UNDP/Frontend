@@ -222,7 +222,6 @@ export default function Simulation() {
         }
         const result: SimulationData[] = await response.json();
         setData(result.data);
-        console.log("Fetched simulation data:", result.data);
       } catch (err) {
         setError((err as Error).message);
       }
