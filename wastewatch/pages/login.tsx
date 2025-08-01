@@ -26,7 +26,7 @@ export default function Home() {
     e.preventDefault();
 
     try {
-      const res = await fetch("http://127.0.0.1:5000/user/login", {
+      const res = await fetch("https://backend-production-f2bb.up.railway.app/user/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
