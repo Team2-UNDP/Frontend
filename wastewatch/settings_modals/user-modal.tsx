@@ -78,8 +78,8 @@ export default function UserModal({
     try {
       const url =
       activeSection === "add"
-        ? "http://127.0.0.1:5000/user"
-        : `http://127.0.0.1:5000/user/update`;
+        ? `${process.env.NEXT_PUBLIC_BACKEND}/user`
+        : `${process.env.NEXT_PUBLIC_BACKEND}/user/update`;
 
       const method = activeSection === "add" ? "POST" : "PUT";
 

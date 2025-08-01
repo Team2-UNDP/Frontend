@@ -36,7 +36,6 @@ export default function Home() {
       });
 
       const data = await res.json();
-      console.log("res", data);
 
       if (res.ok) {
         if (data[0].access_token) {

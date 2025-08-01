@@ -163,7 +163,7 @@ export default function WasteWatchDashboard() {
                 </div>
 
               {/* Legends */}
-              <div className="absolute bottom-4 left-4 bg-white rounded-md px-3 py-2 text-sm text-black shadow z-20">
+              <div className="absolute bottom-4 left-4 bg-white rounded-md px-3 py-2 text-sm text-black shadow z-10">
                 <p className="font-bold mb-1">Legends</p>
                 <span className="block w-32 h-[1px] bg-[#ADADAD] mt-1"></span>
                 <ul>
