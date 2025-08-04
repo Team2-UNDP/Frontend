@@ -43,13 +43,16 @@ export default function Header() {
       </Link>
 
       <nav className="flex items-center gap-6">
-        {["homepage", "About"].map((page, index) => (
+        {[
+          { label: "Home", href: "/homepage" },
+          { label: "About", href: "/about" },
+        ].map((item, index) => (
           <Link
             key={index}
-            href={`/${page}`}
+            href={item.href}
             className="relative group text-white font-medium"
           >
-            {page === "homepage" ? "Home" : page}
+            {item.label}
             <span className="pointer-events-none absolute bottom-0 left-1/2 w-0 h-0.5 bg-white transition-all duration-300 group-hover:w-full group-hover:left-0"></span>
           </Link>
         ))}
