@@ -3,7 +3,9 @@
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import router from "next/router";
+import MessageModal from "../components/message-modal"; // Adjust the import path as necessary
 
+// User Modal Component
 export default function UserModal({
   isOpen,
   onClose,
@@ -18,6 +20,8 @@ export default function UserModal({
   const [isFormValid, setIsFormValid] = useState<boolean>(false); // Added isFormValid state
   const formRef = useRef<HTMLFormElement | null>(null);
   const [token, setToken] = useState<string | null>(null);
+  const [showMessageModal, setShowMessageModal] = useState(false);
+  const [messageText, setMessageText] = useState("");
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -93,15 +97,25 @@ export default function UserModal({
       });
 
       if (res.ok) {
-      alert(activeSection === "add" ? "User added successfully!" : "User updated successfully!");
-      onClose(); // Close the modal
+        setMessageText(
+          activeSection === "add" ? "User added successfully!" : "User updated successfully!"
+        );
+        setShowMessageModal(true);
+
+        // Optional: Close modal after showing success
+        setTimeout(() => {
+          setShowMessageModal(false);
+          onClose(); // ✅ Close your modal after feedback
+        }, 2000);
       } else {
-      const error = await res.json();
-      alert(`Error: ${error.detail}`);
+        const error = await res.json();
+        setMessageText(`Error: ${error.detail}`);
+        setShowMessageModal(true);
       }
     } catch (err) {
       console.error("Error processing user:", err);
-      alert("Failed to process user. Please try again.");
+      setMessageText("Failed to process user. Please try again.");
+      setShowMessageModal(true);
     }
   };
 
@@ -120,7 +134,8 @@ export default function UserModal({
     if (typeof window !== "undefined") {
       const token = localStorage.getItem("token");
       if (!token) {
-        alert("User not authenticated. Please log in.");
+        setMessageText("User not authenticated. Please log in.");
+        setShowMessageModal(true);
         router.push("/"); // Redirect once
       }
     }
@@ -311,6 +326,9 @@ export default function UserModal({
           )}
         </div>
       </div>
+      {showMessageModal && (
+        <MessageModal message={messageText} onClose={() => setShowMessageModal(false)} />
+      )}
     </div>
   );
 }

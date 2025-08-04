@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/router";
 import { json } from "stream/consumers";
+import MessageModal from "../components/message-modal"; // Adjust the import path as necessary
 
 export default function BuoyModal({
   isOpen,
@@ -20,6 +21,8 @@ export default function BuoyModal({
   const [refreshBuoys, setRefreshBuoys] = useState(false);
   const [buoyId, setBuoyId] = useState<string>("");
   const router = useRouter();
+  const [showMessageModal, setShowMessageModal] = useState(false);
+  const [messageText, setMessageText] = useState("");
 
   useEffect(() => {
     const fetchBuoyData = async () => {
@@ -63,7 +66,8 @@ export default function BuoyModal({
     };
 
     if (!baseData.name || !baseData.status || !baseData.live_feed_link) {
-      alert("All fields are required.");
+      setMessageText("All fields are required.");
+      setShowMessageModal(true);
       return;
     }
 
@@ -85,17 +89,20 @@ export default function BuoyModal({
       );
 
       if (res.ok) {
-        alert(`Buoy ${activeSection === "edit" ? "updated" : "added"} successfully!`);
+        setMessageText(`Buoy ${activeSection === "edit" ? "updated" : "added"} successfully!`);
+        setShowMessageModal(true);
         setRefreshBuoys(true);
         onClose();
         router.reload();
       } else {
         const error = await res.json();
-        alert(`Error: ${error.detail}`);
+        setMessageText(`Error: ${error.detail}`);
+        setShowMessageModal(true);
       }
     } catch (err) {
       console.error(`Error ${activeSection === "edit" ? "editing" : "adding"} buoy:`, err);
-      alert(`Failed to ${activeSection === "edit" ? "edit" : "add"} buoy.`);
+      setMessageText(`Failed to ${activeSection === "edit" ? "edit" : "add"} buoy.`);
+      setShowMessageModal(true);
     }
   };
 
@@ -374,6 +381,9 @@ export default function BuoyModal({
           )}
         </div>
       </div>
+      {showMessageModal && (
+        <MessageModal message={messageText} onClose={() => setShowMessageModal(false)} />
+      )}
     </div>
   );
 }

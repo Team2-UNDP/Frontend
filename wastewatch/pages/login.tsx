@@ -2,12 +2,15 @@ import Head from "next/head";
 import { useState } from "react";
 import { useRouter } from "next/router";
 import { useEffect } from "react";
+import Modal from "../components/message-modal"; // Adjust the import path as necessary
 
 export default function Home() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const router = useRouter();
+  const [showModal, setShowModal] = useState(false);
+  const [modalMessage, setModalMessage] = useState("");
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -38,22 +41,29 @@ export default function Home() {
       const data = await res.json();
 
       if (res.ok) {
-        if (data[0].access_token) {
+        if (data[0]?.access_token) {
           localStorage.setItem("token", data[0].access_token);
-          router.push("/homepage");
-          alert("Login successful!");
+          setModalMessage("Login successful!");
+          setShowModal(true);
+
+          // Optional: redirect after short delay so user sees the message
+          setTimeout(() => {
+            router.push("/homepage");
+          }, 1000);
         } else {
-          alert("Error logging in.");
+          setModalMessage("Error logging in.");
+          setShowModal(true);
         }
       } else {
-        alert(data.message || "Login failed.");
+        setModalMessage(data.message || "Login failed.");
+        setShowModal(true);
       }
     } catch (err) {
       console.error(err);
-      alert("Login failed. Server error.");
+      setModalMessage("Login failed. Server error.");
+      setShowModal(true);
     }
   };
-
 
 
   return (
@@ -144,6 +154,13 @@ export default function Home() {
             </form>
           </div>
         </div>
+        {showModal && (
+          <Modal
+            message={modalMessage}
+            onClose={() => setShowModal(false)}
+          />
+        )}
+
       </main>
     </>
   );

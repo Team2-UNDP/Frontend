@@ -6,13 +6,15 @@ import Image from "next/image";
 import BuoyModal from "@/settings_modals/buoy-modal";
 import UserModal from "@/settings_modals/user-modal";
 import DroneModal from "@/settings_modals/drone-modal";
+import Modal from "./message-modal";
 
 export default function Header() {
   const [showSettings, setShowSettings] = useState(false);
   const [showBuoyModal, setShowBuoyModal] = useState(false);
   const [showDroneModal, setShowDroneModal] = useState(false);
   const [showUserModal, setShowUserModal] = useState(false);
-
+  const [showModal, setShowModal] = useState(false);
+  const [modalMessage, setModalMessage] = useState("");
   const settingsRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -110,7 +112,7 @@ export default function Header() {
                 <li
                   onClick={async () => {
                     try {
-                      const res = await fetch("http://127.0.0.1:5000/user/logout", {
+                      const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND}/user/logout`, {
                         method: "POST",
                         headers: {
                           "Content-Type": "application/json",
@@ -119,15 +121,22 @@ export default function Header() {
                       });
                 
                       if (res.ok) {
-                        localStorage.removeItem("token"); // Clear token from localStorage
-                        alert("Logged out successfully!");
-                        window.location.href = "/login"; // Redirect to login page
+                        localStorage.removeItem("token");
+                        setModalMessage("Logged out successfully!");
+                        setShowModal(true);
+
+                        // Optional redirect after short delay
+                        setTimeout(() => {
+                          window.location.href = "/login";
+                        }, 1000);
                       } else {
-                        alert("Logout failed. Please try again.");
+                        setModalMessage("Logout failed. Please try again.");
+                        setShowModal(true);
                       }
                     } catch (err) {
                       console.error("Logout error:", err);
-                      alert("Logout failed. Server error.");
+                      setModalMessage("Logout failed. Server error.");
+                      setShowModal(true);
                     }
                   }}
                   className="flex items-center gap-2 cursor-pointer hover:text-[#065C7C]"
@@ -145,6 +154,18 @@ export default function Header() {
           )}
         </div>
       </nav>
+
+      {showModal && (
+        <Modal
+          message={modalMessage}
+          onClose={() => {
+            setShowModal(false);
+            if (modalMessage === "Logged out successfully!") {
+              window.location.href = "/login";
+            }
+          }}
+        />
+      )}
 
       {/* Modals */}
       <UserModal

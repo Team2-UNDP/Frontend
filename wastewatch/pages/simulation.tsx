@@ -2,7 +2,8 @@
 import React, { useRef, useState, useEffect } from "react";
 import Header from "@/components/header";
 import Image from "next/image";
-
+import MessageModal from "@/components/message-modal";
+ // Adjust the import path as necessary
 export default function Simulation() {
   const [mapInstance, setMapInstance] = useState<any>(null);
   const [coordinatesList, setCoordinatesList] = useState<[number, number][]>(
@@ -19,6 +20,9 @@ export default function Simulation() {
   const [data, setData] = useState<SimulationData[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const toggleHistory = () => setHistoryVisible(!historyVisible);
+  const [showMessageModal, setShowMessageModal] = useState(false);
+  const [messageText, setMessageText] = useState("");
+
   interface SimulationRequest {
     lon_start: number[];
     lat_start: number[];
@@ -113,8 +117,14 @@ export default function Simulation() {
       selectedDays === null ||
       hasSimulated
     ) {
-      if (hasSimulated) alert("Simulation already started.");
-      else alert("Please select coordinates and a day value before simulating.");
+      if (hasSimulated) {
+        setMessageText("Simulation already started.");
+        setShowMessageModal(true);
+      }
+      else {
+        setMessageText("Please select coordinates and a day value before simulating.");
+        setShowMessageModal(true);
+      } 
       return;
     }
 
@@ -406,7 +416,9 @@ export default function Simulation() {
           </div>
         </div>
       )}
-
+      {showMessageModal && (
+        <MessageModal message={messageText} onClose={() => setShowMessageModal(false)} />
+      )}
     </div>
   );
 }
