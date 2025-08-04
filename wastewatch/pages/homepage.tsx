@@ -73,18 +73,37 @@ export default function WasteWatchDashboard() {
   }, [router]);
 
   useEffect(() => {
-    const fetchNotifications = async () => {
-      try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND}/notification/`);
-        const data = await res.json();
-        setNotifications(data.data);
-      } catch (error) {
-        console.error("Failed to fetch notifications", error);
-      }
-    };
+      const fetchNotifications = async () => {
+        try {
+          const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND}/notification/`);
+          const data = await res.json();
+          setNotifications(data.data);
+        } catch (error) {
+          console.error("Failed to fetch notifications", error);
+        }
+      };
 
-    fetchNotifications();
-  }, []);
+      fetchNotifications();
+
+      const ws = new WebSocket(`${process.env.NEXT_PUBLIC_BACKEND_WS}/ws/notifications`);
+
+      ws.onmessage = (event) => {
+        try {
+          const newNotif = JSON.parse(event.data);
+          setNotifications((prev) => [newNotif, ...prev]);
+        } catch (e) {
+          console.error("Error parsing WebSocket message", e);
+        }
+      };
+
+      ws.onerror = (error) => {
+        console.error("WebSocket error", error);
+      };
+
+      return () => {
+        ws.close(); // cleanup on unmount
+      };
+    }, []);
 
 
   // Fetch buoy data
@@ -269,6 +288,7 @@ export default function WasteWatchDashboard() {
                 </div>
               </div>
 
+              {/* Notification List */}
               <div className="mt-4 bg-white p-5 rounded-2xl">
                 <div className="space-y-4 max-h-64 overflow-y-auto pr-2">
                   {notifications.map((item, idx) => (
