@@ -18,6 +18,8 @@ export default function WasteWatchDashboard() {
   const [buoys, setBuoys] = useState<any[]>([]); // Store buoy data, initialized as an empty array
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const getBuoyName = createBuoyNameLookup(buoys);
+  const [selectedDate, setSelectedDate] = useState("");
+  const dateInputRef = useRef<HTMLInputElement>(null);
 
   type TrashCount = {
     small_count: number;
@@ -34,6 +36,18 @@ export default function WasteWatchDashboard() {
     time_window: string;
     last_detection_id: string | null;
   };
+
+  useEffect(() => {
+    const today = new Date().toISOString().split("T")[0]; // Format: YYYY-MM-DD
+    setSelectedDate(today);
+  }, []);
+
+  const handleIconClick = () => {
+    if (dateInputRef.current) {
+      dateInputRef.current.showPicker(); // triggers the date input
+    }
+  };
+
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -115,13 +129,11 @@ export default function WasteWatchDashboard() {
     };
   }, []);
 
-
-
   // Fetch buoy data
   useEffect(() => {
     const fetchBuoys = async () => {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND}/buoy/`, {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND}/buoy?date=${selectedDate}`, {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
@@ -131,10 +143,10 @@ export default function WasteWatchDashboard() {
         if (res.ok) {
           const responseData = await res.json();
           if (responseData && Array.isArray(responseData.data)) {
-            setBuoys(responseData.data); // Store buoy data in state if it's an array inside the data attribute
+            setBuoys(responseData.data);
           } else {
             console.error("Unexpected data format: Buoys data is not an array");
-            setBuoys([]); // Fallback to an empty array
+            setBuoys([]);
           }
         } else {
           console.error("Failed to fetch buoys");
@@ -145,7 +157,7 @@ export default function WasteWatchDashboard() {
     };
 
     fetchBuoys();
-  }, []);
+  }, [selectedDate]);
 
   const markNotificationAsRead = async (id: string) => {
     try {
@@ -203,22 +215,6 @@ export default function WasteWatchDashboard() {
 
 
 
-  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; id: string | null }>({
-    x: 0,
-    y: 0,
-    id: null,
-  });
-
-  const handleRightClick = (e: React.MouseEvent, id: string) => {
-    e.preventDefault();
-    setContextMenu({
-      x: e.pageX,
-      y: e.pageY,
-      id,
-    });
-  };
-
-
   // Accepts the buoys array, returns a function to get buoy name by ID
   function createBuoyNameLookup(buoys: { _id: string; name: string }[]) {
     // Build a Map for fast lookup
@@ -248,6 +244,7 @@ export default function WasteWatchDashboard() {
                 <div className="relative h-[500px] overflow-hidden rounded-3xl border-2 border-[#ACDCFF] z-10">
                 {/* Use the LeafletMap component */}
                 <LeafletMap
+                  key={selectedDate}
                   center={[7.0806, 125.6476]}
                   zoom={10}
                   markers={buoys.map((buoy) => ({
@@ -303,24 +300,39 @@ export default function WasteWatchDashboard() {
                 </ul>
               </div>
 
-              {/* Filter */}
-                <div className="absolute top-4 right-4 text-white flex px-4">
-                <div className="relative bg-ocean-gradient rounded-xl px-2 py-1 ml-2 border border-white z-20">
-                  <select
-                  id="filter"
-                  className="appearance-none bg-transparent text-white pr-32 outline-none"
-                  >
-                  <option>Date</option>
-                  </select>
+              {/* Date Filter */}
+              <div className="absolute top-4 right-4 text-white flex px-4 z-1000">
+                <div className="relative bg-ocean-gradient rounded-xl px-2 py-1 border border-white flex items-center">
+                {/* Hidden date input */}
+                <input
+                  type="date"
+                  ref={dateInputRef}
+                  value={selectedDate}
+                  onChange={(e) => {
+                    setSelectedDate(e.target.value);
+                    console.log("Selected date:", e.target.value);
+                  }}
+                  className="appearance-none bg-transparent text-white outline-none cursor-pointer w-full pr-10 custom-date-input"
+                  style={{
+                    colorScheme: "dark", // Makes sure the calendar is styled for dark mode
+                  }}
+                />
+
+                {/* Custom dropdown icon */}
+                <button
+                  type="button"
+                  onClick={handleIconClick}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2"
+                >
                   <Image
-                  src="/icons/Dropdown.png"
-                  alt="Dropdown"
-                  width={16}
-                  height={16}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none"
+                    src="/icons/Dropdown.png"
+                    alt="Dropdown"
+                    width={16}
+                    height={16}
                   />
-                </div>
-                </div>
+                </button>
+              </div>
+            </div>
             </div>
           </section>
 
