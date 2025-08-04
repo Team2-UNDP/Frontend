@@ -73,37 +73,48 @@ export default function WasteWatchDashboard() {
   }, [router]);
 
   useEffect(() => {
-      const fetchNotifications = async () => {
-        try {
-          const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND}/notification/`);
-          const data = await res.json();
-          setNotifications(data.data);
-        } catch (error) {
-          console.error("Failed to fetch notifications", error);
-        }
-      };
+    const fetchNotifications = async () => {
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND}/notification/`);
+        const data = await res.json();
+        setNotifications(data.data);
+      } catch (error) {
+        console.error("❌ Failed to fetch notifications:", error);
+      }
+    };
 
-      fetchNotifications();
+    fetchNotifications();
 
-      const ws = new WebSocket(`${process.env.NEXT_PUBLIC_BACKEND_WS}/ws/notifications`);
+    const ws = new WebSocket(`${process.env.NEXT_PUBLIC_BACKEND_WS}/ws/notifications`);
 
-      ws.onmessage = (event) => {
-        try {
-          const newNotif = JSON.parse(event.data);
-          setNotifications((prev) => [newNotif, ...prev]);
-        } catch (e) {
-          console.error("Error parsing WebSocket message", e);
-        }
-      };
+    ws.onmessage = (event) => {
+      try {
+        const newNotif = JSON.parse(event.data);
+        console.log("📡 New WebSocket Notification:", newNotif);
 
-      ws.onerror = (error) => {
-        console.error("WebSocket error", error);
-      };
+        setNotifications((prevNotifs) => {
+          // Avoid duplicate notifications
+          const exists = prevNotifs.some((n) => n._id === newNotif._id);
+          if (exists) {
+            // Optionally update existing notification if content has changed
+            return prevNotifs.map((n) => (n._id === newNotif._id ? newNotif : n));
+          }
+          return [newNotif, ...prevNotifs];
+        });
+      } catch (e) {
+        console.error("❌ Error parsing WebSocket message:", e);
+      }
+    };
 
-      return () => {
-        ws.close(); // cleanup on unmount
-      };
-    }, []);
+    ws.onerror = (error) => {
+      console.error("❌ WebSocket error:", error);
+    };
+
+    return () => {
+      ws.close();
+    };
+  }, []);
+
 
 
   // Fetch buoy data
@@ -135,6 +146,78 @@ export default function WasteWatchDashboard() {
 
     fetchBuoys();
   }, []);
+
+  const markNotificationAsRead = async (id: string) => {
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND}/notifications/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ read: true }),
+      });
+
+      if (res.ok) {
+        setNotifications(prev =>
+          prev.map(n => (n._id === id ? { ...n, read: true } : n))
+        );
+      }
+    } catch (err) {
+      console.error("Failed to mark notification as read:", err);
+    }
+  };
+
+  const markAllAsRead = async () => {
+    try {
+      // Filter unread notifications
+      const unreadNotifs = notifications.filter((notif) => !notif.read);
+
+      // Send individual PUT requests for each unread notification
+      const updatePromises = unreadNotifs.map(async (notif) => {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND}/notification/${notif._id}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ read: true }),
+        });
+
+        const data = await res.json();
+        console.log(`✅ Updated notification ${notif._id}:`, data);
+        return data;
+      });
+
+      await Promise.all(updatePromises); // Wait for all updates to complete
+
+      // Update local state
+      setNotifications((prev) =>
+        prev.map((n) => ({ ...n, read: true }))
+      );
+
+      setDropdownOpen(false);
+      console.log("✅ All unread notifications marked as read individually.");
+    } catch (err) {
+      console.error("❌ Failed to mark all notifications as read:", err);
+    }
+  };
+
+
+
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; id: string | null }>({
+    x: 0,
+    y: 0,
+    id: null,
+  });
+
+  const handleRightClick = (e: React.MouseEvent, id: string) => {
+    e.preventDefault();
+    setContextMenu({
+      x: e.pageX,
+      y: e.pageY,
+      id,
+    });
+  };
+
 
   // Accepts the buoys array, returns a function to get buoy name by ID
   function createBuoyNameLookup(buoys: { _id: string; name: string }[]) {
@@ -260,7 +343,9 @@ export default function WasteWatchDashboard() {
                   </button>
                   {dropdownOpen && (
                     <div className="absolute right-0 mt-2 w-52 bg-white rounded-xl shadow-md z-10 py-2 text-sm text-black">
-                      <button className="flex items-center px-4 py-2 hover:bg-gray-100 w-full text-left font-normal cursor-pointer">
+                      <button 
+                      onClick={markAllAsRead}
+                      className="flex items-center px-4 py-2 hover:bg-gray-100 w-full text-left font-normal cursor-pointer">
                         <Image
                           src="/icons/Check.png"
                           width={16}
@@ -304,8 +389,18 @@ export default function WasteWatchDashboard() {
                           alt="Buoy"
                         />
                         <div>
-                          <p className="font-bold text-sm">{getBuoyName(item.buoy_id)}</p>
-                          <p className="text-xs text-gray-600">
+                          <p
+                            className={`text-sm ${
+                              item.read ? "font-medium text-black" : "font-black text-black"
+                            }`}
+                          >
+                            {getBuoyName(item.buoy_id)}
+                          </p>
+                          <p
+                            className={`text-xs ${
+                              item.read ? "text-gray-600" : "text-black"
+                            }`}
+                          >
                             {item.detection_type === "sustain_alert"
                               ? "Accumulation Detected"
                               : "Trash Detected"}
@@ -361,8 +456,13 @@ export default function WasteWatchDashboard() {
                               width={20}
                               height={20}
                             />
-                            <p className="text-sm font-medium">{getBuoyName(item.buoy_id)}</p>
-                          </div>
+                          <p
+                            className={`text-sm ${
+                              item.read ? "font-black text-medium" : "font-black text-black"
+                            }`}
+                          >
+                            {getBuoyName(item.buoy_id)}
+                          </p>                          </div>
                           <p className="text-sm text-left text-[#B70000] font-medium">
                             {item.detection_type === "sustain_alert"
                               ? "Accumulation Detected"
