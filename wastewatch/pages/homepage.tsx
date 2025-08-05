@@ -3,6 +3,7 @@ import Image from "next/image";
 import Header from "@/components/header";
 import { useRouter } from "next/router";
 import LeafletMap from "@/components/leaflet_map";
+import { getSocket } from "@/utils/socket";
 
 export default function WasteWatchDashboard() {
   const [isSignedIn, setIsSignedIn] = useState(false);
@@ -99,13 +100,11 @@ export default function WasteWatchDashboard() {
 
     fetchNotifications();
 
-    const ws = new WebSocket(`${process.env.NEXT_PUBLIC_BACKEND_WS}/ws/notifications`);
+    const socket = getSocket();
 
-    ws.onmessage = (event) => {
+    socket.onmessage = (event) => {
       try {
         const newNotif = JSON.parse(event.data);
-        console.log("📡 New WebSocket Notification:", newNotif);
-
         setNotifications((prevNotifs) => {
           // Avoid duplicate notifications
           const exists = prevNotifs.some((n) => n._id === newNotif._id);
@@ -120,12 +119,12 @@ export default function WasteWatchDashboard() {
       }
     };
 
-    ws.onerror = (error) => {
+    socket.onerror = (error) => {
       console.error("❌ WebSocket error:", error);
     };
 
     return () => {
-      ws.close();
+      socket.close();
     };
   }, []);
 
@@ -470,7 +469,7 @@ export default function WasteWatchDashboard() {
                             />
                           <p
                             className={`text-sm ${
-                              item.read ? "font-black text-medium" : "font-black text-black"
+                              item.read ? "font-medium text-black" : "font-black text-black"
                             }`}
                           >
                             {getBuoyName(item.buoy_id)}

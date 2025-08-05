@@ -67,23 +67,44 @@ export default function UserModal({
     };
   }, [activeSection, userInfo]);
   
-  const handleAddUser = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmitUser = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-  
     const formData = new FormData(e.target as HTMLFormElement);
-    const userData = {
-      name: formData.get("name"),
-      username: formData.get("username"),
-      is_admin: formData.get("role") === "Admin",
-      ...(activeSection === "edit"
-        ? (formData.get("password") ? { password: formData.get("password") } : {})
-        : { password: formData.get("password") }),
-    };
+
+    const updatedData: any = {};
+
+    // Collect current form values
+    const name = formData.get("name") as string;
+    const username = formData.get("username") as string;
+    const password = formData.get("password") as string;
+    const role = formData.get("role") === "Admin";
+
+    // Only include changed values
+    if (activeSection === "edit") {
+      if (name && name !== userInfo?.name) updatedData.name = name;
+      if (username && username !== userInfo?.username) updatedData.username = username;
+      if (password) updatedData.password = password; // Send only if not empty
+      if (role !== userInfo?.is_admin) updatedData.is_admin = role;
+    } else {
+      // Add mode: include everything
+      updatedData.name = name;
+      updatedData.username = username;
+      updatedData.password = password;
+      updatedData.is_admin = role;
+    }
+
+    // Prevent empty update
+    if (activeSection === "edit" && Object.keys(updatedData).length === 0) {
+      setMessageText("No changes detected.");
+      setShowMessageModal(true);
+      return;
+    }
+
     try {
       const url =
-      activeSection === "add"
-        ? `${process.env.NEXT_PUBLIC_BACKEND}/user`
-        : `${process.env.NEXT_PUBLIC_BACKEND}/user/update`;
+        activeSection === "add"
+          ? `${process.env.NEXT_PUBLIC_BACKEND}/user`
+          : `${process.env.NEXT_PUBLIC_BACKEND}/user/update`;
 
       const method = activeSection === "add" ? "POST" : "PUT";
 
@@ -91,10 +112,12 @@ export default function UserModal({
         method,
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`, // Include the bearer token
+          Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(userData),
+        body: JSON.stringify(updatedData),
       });
+
+      const resJson = await res.json();
 
       if (res.ok) {
         setMessageText(
@@ -102,14 +125,13 @@ export default function UserModal({
         );
         setShowMessageModal(true);
 
-        // Optional: Close modal after showing success
         setTimeout(() => {
           setShowMessageModal(false);
-          onClose(); // ✅ Close your modal after feedback
+          onClose();
+          router.reload(); // Optional: refresh data
         }, 2000);
       } else {
-        const error = await res.json();
-        setMessageText(`Error: ${error.detail}`);
+        setMessageText(`Error: ${resJson.detail}`);
         setShowMessageModal(true);
       }
     } catch (err) {
@@ -118,6 +140,7 @@ export default function UserModal({
       setShowMessageModal(true);
     }
   };
+
 
   
   // Fetch user info from local storage when the modal is opened
@@ -140,6 +163,49 @@ export default function UserModal({
       }
     }
   }, []); // empty dependency array: runs only once on mount
+
+  const handleDeleteUser = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.target as HTMLFormElement);
+    const password = formData.get("delete_user_id");
+
+    if (!password) {
+      setMessageText("Password is required to delete account.");
+      setShowMessageModal(true);
+      return;
+    }
+
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND}/user/delete`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ password }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        setMessageText("Account deleted successfully. Logging out...");
+        setShowMessageModal(true);
+
+        setTimeout(() => {
+          localStorage.removeItem("token");
+          localStorage.removeItem("user_info");
+          router.push("/"); // Redirect to login
+        }, 2000);
+      } else {
+        setMessageText(`Failed to delete account: ${data.detail}`);
+        setShowMessageModal(true);
+      }
+    } catch (err) {
+      console.error("Error deleting user:", err);
+      setMessageText("An error occurred while deleting your account.");
+      setShowMessageModal(true);
+    }
+  };
 
 
 
@@ -215,7 +281,7 @@ export default function UserModal({
 
           {(activeSection === "add" || activeSection === "edit") && (
             <>
-              <form className="space-y-6" onSubmit={handleAddUser}>
+              <form className="space-y-6" onSubmit={handleSubmitUser} ref={formRef}>
                 <h3 className="text-xl font-bold">
                   {activeSection === "add" ? "Add Account" : "Edit Account"}
                 </h3>
@@ -267,6 +333,7 @@ export default function UserModal({
                   <input
                     id="password"
                     name="password"
+                    type="password"
                     placeholder={activeSection === "edit" ? "Leave blank to keep current password" : ""}
                     className="flex-1 border border-black rounded px-2 py-1"
                   />
@@ -277,6 +344,7 @@ export default function UserModal({
                   </label>
                   <input
                     id="conf_password"
+                    type="password"
                     placeholder={activeSection === "edit" ? "Leave blank to keep current password" : ""}
                     className="flex-1 border border-black rounded px-2 py-1"
                   />
@@ -299,29 +367,30 @@ export default function UserModal({
           {activeSection === "delete" && (
             <div>
               <h3 className="text-xl font-bold mb-4">Delete User</h3>
-              <form className="space-y-4">
-                <div className="flex items-center gap-4">
-                  <label
-                    htmlFor="delete_user_id"
-                    className="font-bold min-w-[60px]"
-                  >
-                    Enter Password:
-                  </label>
-                  <input
-                    id="delete_user_id"
-                    type="text"
-                    className="flex-1 border border-black rounded px-2 py-1"
-                  />
-                </div>
-                <div className="flex justify-center py-6">
-                  <button
-                    type="submit"
-                    className="bg-[#203F5A] text-white px-10 py-2 rounded-full shadow"
-                  >
-                    Delete Account
-                  </button>
-                </div>
-              </form>
+                <form className="space-y-4" onSubmit={handleDeleteUser}>
+                  <div className="flex items-center gap-4">
+                    <label
+                      htmlFor="delete_user_id"
+                      className="font-bold min-w-[60px]"
+                    >
+                      Enter Password:
+                    </label>
+                    <input
+                      id="delete_user_id"
+                      name="delete_user_id"
+                      type="password"
+                      className="flex-1 border border-black rounded px-2 py-1"
+                    />
+                  </div>
+                  <div className="flex justify-center py-6">
+                    <button
+                      type="submit"
+                      className="bg-[#203F5A] text-white px-10 py-2 rounded-full shadow"
+                    >
+                      Delete Account
+                    </button>
+                  </div>
+                </form>
             </div>
           )}
         </div>
