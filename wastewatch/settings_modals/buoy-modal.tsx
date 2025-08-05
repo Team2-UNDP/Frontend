@@ -120,6 +120,44 @@ export default function BuoyModal({
     }
   };
 
+  const handleDeleteBuoy = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+
+    const form = e.target as HTMLFormElement;
+    const buoyId = (form.querySelector("#delete_Buoy_id") as HTMLInputElement).value.trim();
+
+    if (!buoyId) {
+      setMessageText("Buoy ID is required.");
+      setShowMessageModal(true);
+      return;
+    }
+
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND}/buoy/${buoyId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+        },
+      });
+
+      if (response.ok) {
+        setMessageText("Buoy deleted successfully!");
+        setShowMessageModal(true);
+        setRefreshBuoys(true); // if you want to re-fetch buoy list
+        router.reload();
+      } else {
+        const err = await response.json();
+        setMessageText(`Failed to delete buoy: ${err.detail || "Unknown error"}`);
+        setShowMessageModal(true);
+      }
+    } catch (error) {
+      console.error("Error deleting buoy:", error);
+      setMessageText("Something went wrong while trying to delete the buoy.");
+      setShowMessageModal(true);
+    }
+  };
+
+
   const latestLocations = buoyData?.locations
     ?.sort((a: { date: string }, b: { date: string }) =>
       new Date(b.date).getTime() - new Date(a.date).getTime()
@@ -354,7 +392,7 @@ export default function BuoyModal({
           {activeSection === "delete" && (
             <div>
               <h3 className="text-xl font-bold mb-4">Delete Buoy</h3>
-              <form className="space-y-4">
+              <form className="space-y-4" onSubmit={handleDeleteBuoy}>
                 <div className="flex items-center gap-4">
                   <label
                     htmlFor="delete_Buoy_id"
