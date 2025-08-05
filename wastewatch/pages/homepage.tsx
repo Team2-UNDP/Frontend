@@ -301,7 +301,7 @@ export default function WasteWatchDashboard() {
               </div>
 
               {/* Date Filter */}
-              <div className="absolute top-4 right-4 text-white flex px-4 z-1000">
+              <div className="absolute top-4 right-4 text-white flex px-4 z-10">
                 <div className="relative bg-ocean-gradient rounded-xl px-2 py-1 border border-white flex items-center">
                 {/* Hidden date input */}
                 <input

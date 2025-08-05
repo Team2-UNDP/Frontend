@@ -47,7 +47,7 @@ export default function Simulation() {
 
   async function querySimulationApi(request: SimulationRequest): Promise<SimulationResponse | null> {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND}/simulate`, {
+      const response = await fetch(`http://127.0.0.1:7000/simulate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -184,7 +184,7 @@ export default function Simulation() {
     }
 
     try {
-      const response = await fetch("http://127.0.0.1:5000/simulation/", {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND}/simulation/`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -194,11 +194,17 @@ export default function Simulation() {
       });
 
       if (!response.ok) {
+        setMessageText(`Failed to save simulation: ${response.status}`);
+        setShowMessageModal(true);
         throw new Error("Failed to save simulation");
       }
-
+      setMessageText("Simulation saved successfully!");
+      setShowMessageModal(true);
       console.log("Simulation saved successfully!");
     } catch (error) {
+      setMessageText(`Error saving simulation: ${error}`);
+      setShowMessageModal(true);
+      setError((error as Error).message);
       console.error("Error saving simulation:", error);
     }
 
@@ -226,14 +232,18 @@ export default function Simulation() {
   useEffect(() => {
     const fetchSimulation = async () => {
       try {
-        const response = await fetch('http://127.0.0.1:5000/simulation/');
+        const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND}/simulation`);
         if (!response.ok) {
+          setMessageText(`Error fetching simulation data: ${response.status}`);
+          setShowMessageModal(true);
           throw new Error(`Error: ${response.status}`);
         }
         const result: SimulationData[] = await response.json();
         setData(result.data);
       } catch (err) {
         setError((err as Error).message);
+        setMessageText(`Error fetching simulation data: ${(err as Error).message}`);
+        setShowMessageModal(true);
       }
     };
 
