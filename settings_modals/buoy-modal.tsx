@@ -12,10 +12,9 @@ export default function BuoyModal({
   isOpen: boolean;
   onClose: () => void;
 }) {
-  const [activeSection, setActiveSection] = useState<
-    "info" | "add" | "edit" | "delete"
-  >("info");
-    const [buoys, setBuoys] = useState([]);
+  type SectionType = "info" | "add" | "edit" | "delete";
+  const [activeSection, setActiveSection] = useState<SectionType>("info");
+  const [buoys, setBuoys] = useState([]);
   const [selectedBuoy, setSelectedBuoy] = useState<string>("");
   const [buoyData, setBuoyData] = useState<Buoy>();
   const [refreshBuoys, setRefreshBuoys] = useState(false);
@@ -216,7 +215,7 @@ export default function BuoyModal({
                   className={`flex items-center gap-2 cursor-pointer font-semibold ${
                     activeSection === section ? "text-[#065C7C]" : ""
                   }`}
-                  onClick={() => setActiveSection(section as any)}
+                  onClick={() => setActiveSection(section)}
                 >
                   <Image
                     src={icons[section]}

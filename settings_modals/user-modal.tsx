@@ -13,9 +13,8 @@ export default function UserModal({
   isOpen: boolean;
   onClose: () => void;
 }) {
-  const [activeSection, setActiveSection] = useState<
-    "info" | "add" | "edit" | "delete"
-  >("info");
+  type SectionType = "info" | "add" | "edit" | "delete";
+  const [activeSection, setActiveSection] = useState<SectionType>("info");
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null); // Added userInfo state
   const [isFormValid, setIsFormValid] = useState<boolean>(false); // Added isFormValid state
   const formRef = useRef<HTMLFormElement | null>(null);
@@ -78,7 +77,7 @@ export default function UserModal({
     e.preventDefault();
     const formData = new FormData(e.target as HTMLFormElement);
 
-    const updatedData: any = {};
+    const updatedData: { [key: string]: string } = {};
 
     // Collect current form values
     const name = formData.get("name") as string;
@@ -251,7 +250,7 @@ export default function UserModal({
                   className={`flex items-center gap-2 cursor-pointer font-semibold ${
                     activeSection === section ? "text-[#065C7C]" : ""
                   }`}
-                  onClick={() => setActiveSection(section as any)}
+                  onClick={() => setActiveSection(section)}
                 >
                   <Image
                     src={icons[section]}

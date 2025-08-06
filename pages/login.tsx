@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useRouter } from "next/router";
 import { useEffect } from "react";
 import Modal from "../components/message-modal"; // Adjust the import path as necessary
+import Script from "next/script";
 
 export default function Home() {
   const [username, setUsername] = useState("");
@@ -19,7 +20,7 @@ export default function Home() {
     } else {
       router.push("/");
     }
-  }, []);
+  }, [router]);
 
   const toggleLoginForm = () => {
     setIsModalOpen((prevState) => !prevState);
@@ -71,7 +72,7 @@ export default function Home() {
       <Head>
         <title>WasteWatch Login</title>
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <script src="https://cdn.tailwindcss.com"></script>
+        <Script src="https://cdn.tailwindcss.com" strategy="afterInteractive"/>
       </Head>
       <main className="font-poppins min-h-screen flex items-center justify-center text-white bg-[url('/images/bg-image.png')] bg-[length:100%_100%] bg-no-repeat bg-center">
         <div className="text-center mt-16">

@@ -20,6 +20,13 @@ export default function DroneModal({
   const [showMessageModal, setShowMessageModal] = useState(false);
   const [messageText, setMessageText] = useState("");
   const router = useRouter();
+
+  type Location = {
+    lat: number;
+    long: number;
+    date: string;
+  };
+
   interface DroneData {
     _id: string;
     name?: string;
@@ -28,11 +35,7 @@ export default function DroneModal({
     status?: string;
     battery_level?: number;
     live_feed_link?: string;
-    locations?: {
-      lat: number;
-      long: number;
-      date: string;
-    }[];
+    locations?: Location[];
     last_charged?: string;
     is_deleted?: boolean;
   }
@@ -210,7 +213,7 @@ export default function DroneModal({
                   className={`flex items-center gap-2 cursor-pointer font-semibold ${
                     activeSection === section ? "text-[#065C7C]" : ""
                   }`}
-                  onClick={() => setActiveSection(section as any)}
+                  onClick={() => setActiveSection(section)}
                 >
                   <Image
                     src={icons[section]}
@@ -259,7 +262,7 @@ export default function DroneModal({
                   <p><strong>Locations:</strong></p>
                   <ul className="list-disc pl-6 max-h-40 overflow-y-auto border border-gray-300 rounded p-2">
                     {latestLocations && latestLocations.length > 0 ? (
-                      latestLocations.map((loc: any, index: number) => (
+                      latestLocations.map((loc: Location, index: number) => (
                         <li key={index}>Date: {new Date(loc.date).toLocaleDateString()}, Lat: {loc.lat}, Long: {loc.long}</li>
                       ))
                     ) : (
@@ -293,7 +296,7 @@ export default function DroneModal({
               )}
               <div className="flex items-start">
                 <label htmlFor="name" className="font-bold min-w-[60px] mt-1">Name:</label>
-                <input id="name" name="name" type="text" value={droneData?.name ?? ""} onChange={(e) => setDroneData((prev: any) => ({ ...prev, name: e.target.value }))} className="flex-1 border border-black rounded px-2 py-1" />
+                <input id="name" name="name" type="text" value={droneData?.name ?? ""} onChange={(e) => setDroneData((prev) => ({ ...prev, name: e.target.value }))} className="flex-1 border border-black rounded px-2 py-1" />
               </div>
               <div className="flex items-center">
                 <label htmlFor="status" className="font-bold min-w-[60px]">Status:</label>
@@ -304,7 +307,7 @@ export default function DroneModal({
               </div>
               <div className="flex items-center gap-4">
                 <label htmlFor="feedback" className="font-bold min-w-[60px]">Live Feedback Link:</label>
-                <input id="feedback" name="feedback" type="text" value={droneData?.live_feed_link ?? ""} onChange={(e) => setDroneData((prev: any) => ({ ...prev, live_feed_link: e.target.value }))} className="flex-1 border border-black rounded px-2 py-1" />
+                <input id="feedback" name="feedback" type="text" value={droneData?.live_feed_link ?? ""} onChange={(e) => setDroneData((prev) => ({ ...prev, live_feed_link: e.target.value }))} className="flex-1 border border-black rounded px-2 py-1" />
               </div>
               <div className="flex justify-center py-6">
                 <button type="submit" className="bg-[#203F5A] text-white px-10 py-2 rounded-full shadow">

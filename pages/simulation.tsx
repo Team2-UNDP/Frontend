@@ -4,6 +4,8 @@ import Header from "@/components/header";
 import Image from "next/image";
 import MessageModal from "@/components/message-modal";
 import { Map } from "leaflet"; // Import Map type from leaflet
+import { LeafletMouseEvent } from "leaflet";
+import L from "leaflet";
 
  // Adjust the import path as necessary
 export default function Simulation() {
@@ -79,7 +81,7 @@ export default function Simulation() {
       const L = (await import("leaflet")).default;
       await import("leaflet/dist/leaflet.css");
 
-      if ((mapRef.current as any)._leaflet_id != null) return;
+      if ((mapRef.current as Map)._leaflet_id != null) return;
 
       const map = L.map(mapRef.current as HTMLElement).setView(
         [7.0806, 125.6476],
@@ -90,7 +92,7 @@ export default function Simulation() {
         attribution: "&copy; OpenStreetMap contributors",
       }).addTo(map);
 
-      map.on("click", (e: any) => {
+      map.on("click", (e: LeafletMouseEvent) => {
         const { lat, lng } = e.latlng;
         setCoordinatesList((prev) => [...prev, [lat, lng]]);
         setHistoryList((prev) => [...prev, [lat, lng]]);
@@ -153,7 +155,15 @@ export default function Simulation() {
 
       if (!pathCoords || pathCoords.length === 0) continue;
 
-      pathCoords.forEach((particleTrajectory: { map: (arg0: ([lon, lat]: [number, number]) => number[]) => [number, number][]; }, index: any) => {
+      pathCoords.forEach(
+        (
+          particleTrajectory: {
+            map: (
+              arg0: ([lon, lat]: [number, number]) => number[]
+            ) => [number, number][];
+          },
+          index: number
+        ) => {
         const latLngs: [number, number][] = particleTrajectory.map(
           ([lon, lat]: [number, number]) => [lat, lon]
         );
@@ -222,7 +232,7 @@ export default function Simulation() {
     setHistoryVisible(false);
 
     if (mapInstance) {
-      mapInstance.eachLayer(async (layer: any) => {
+      mapInstance.eachLayer(async (layer: L.Layer) => {
         const L = (await import("leaflet")).default;
         if (layer instanceof L.Marker || layer instanceof L.Polyline) {
           mapInstance.removeLayer(layer);

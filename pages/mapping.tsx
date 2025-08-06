@@ -1,4 +1,5 @@
 // utils/leafletMap.ts
+import { LeafletMouseEvent } from "leaflet";
 
 export async function initializeLeafletMap(
   container: HTMLDivElement,
@@ -12,7 +13,7 @@ export async function initializeLeafletMap(
     attribution: "&copy; OpenStreetMap contributors",
   }).addTo(map);
 
-  map.on("click", (e: any) => {
+  map.on("click", (e: LeafletMouseEvent) => {
     const { lat, lng } = e.latlng;
     onClickCallback(lat, lng);
 
