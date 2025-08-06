@@ -47,7 +47,7 @@ export default function Simulation() {
 
   async function querySimulationApi(request: SimulationRequest): Promise<SimulationResponse | null> {
     try {
-      const response = await fetch(`http://127.0.0.1:7000/simulate`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_MODEL}/simulate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

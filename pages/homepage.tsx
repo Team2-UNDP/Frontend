@@ -128,11 +128,13 @@ export default function WasteWatchDashboard() {
     };
   }, []);
 
-  // Fetch buoy data
   useEffect(() => {
+    // If selectedDate is not set, use today's date
+    const dateToUse = selectedDate || new Date().toISOString().split("T")[0]; // format: "YYYY-MM-DD"
+
     const fetchBuoys = async () => {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND}/buoy?date=${selectedDate}`, {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND}/buoy?date=${dateToUse}`, {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
