@@ -21,8 +21,10 @@ export default function NotificationListener() {
 
     const unlockAudio = () => {
       if (notificationSoundRef.current) {
-        notificationSoundRef.current.play();
-        notificationSoundRef.current.stop(); // unlock the sound
+        notificationSoundRef.current.mute(true); // temporarily mute
+        notificationSoundRef.current.play();     // unlock the audio system
+        notificationSoundRef.current.stop();     // immediately stop
+        notificationSoundRef.current.mute(false); // unmute back
       }
       window.removeEventListener("click", unlockAudio);
     };
