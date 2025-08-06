@@ -16,7 +16,7 @@ export default function WasteWatchDashboard() {
   const closeModal = () => setModalOpen(false);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
-  const [buoys, setBuoys] = useState<Buoy[]>(); // Store buoy data, initialized as an empty array
+  const [buoys, setBuoys] = useState<Buoy[]>([]); // Store buoy data, initialized as an empty array
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const getBuoyName = createBuoyNameLookup(buoys); // Use the buoy data to create a lookup function
   const [selectedDate, setSelectedDate] = useState("");
@@ -30,8 +30,8 @@ export default function WasteWatchDashboard() {
   }
 
   interface Buoy {
-    id?: string;
-    name?: string;
+    _id: string;
+    name: string;
     status?: string;
     battery_level?: number;
     locations?: BuoyLocation[];
