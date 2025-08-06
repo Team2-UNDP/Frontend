@@ -134,7 +134,7 @@ export default function WasteWatchDashboard() {
 
     const fetchBuoys = async () => {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND}/buoy?date=${dateToUse}`, {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND}/buoy/?date=${dateToUse}`, {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
