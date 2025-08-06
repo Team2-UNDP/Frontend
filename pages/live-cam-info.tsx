@@ -2,8 +2,6 @@
 import Image from "next/image";
 import Header from "@/components/header";
 import { useEffect, useState } from "react";
-import { json } from "stream/consumers";
-
 
 export default function LiveCam () {
 

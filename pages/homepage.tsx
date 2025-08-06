@@ -176,26 +176,6 @@ export default function WasteWatchDashboard() {
     fetchBuoys();
   }, [selectedDate]);
 
-  const markNotificationAsRead = async (id: string) => {
-    try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND}/notifications/${id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ read: true }),
-      });
-
-      if (res.ok) {
-        setNotifications(prev =>
-          prev.map(n => (n._id === id ? { ...n, read: true } : n))
-        );
-      }
-    } catch (err) {
-      console.error("Failed to mark notification as read:", err);
-    }
-  };
-
   const markAllAsRead = async () => {
     try {
       // Filter unread notifications
@@ -405,7 +385,7 @@ export default function WasteWatchDashboard() {
               {/* Notification List */}
               <div className="mt-4 bg-white p-5 rounded-2xl">
                 <div className="space-y-4 max-h-64 overflow-y-auto pr-2">
-                  {notifications.map((item, idx) => (
+                  {notifications.map((item) => (
                     <div
                       key={item._id}
                       className="bg-white p-4 rounded-lg shadow flex items-center justify-between border border-black"
@@ -473,7 +453,7 @@ export default function WasteWatchDashboard() {
 
                     {/* Notification List */}
                     <div className="space-y-3 overflow-y-auto" style={{ maxHeight: 'calc(400px - 64px)' }}>
-                      {notifications.map((item, idx) => (
+                      {notifications.map((item) => (
                         <div
                           key={item._id}
                           className="grid grid-cols-3 gap-4 py-3 border border-gray-200 rounded-md px-5 items-center"
