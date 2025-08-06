@@ -154,7 +154,9 @@ const LeafletMap: React.FC<LeafletMapProps> = ({ center, zoom, markers, mapKey }
                 <BuoyDetailsModal
                     isOpen={true}
                     onClose={() => setSelectedBuoy(null)}
-                    buoyData={{
+                    buoyData={
+                        {
+                        id: selectedBuoy.id || "",
                         name: selectedBuoy.name || "",
                         status: selectedBuoy.status || "",
                         lat: selectedBuoy.lat,
