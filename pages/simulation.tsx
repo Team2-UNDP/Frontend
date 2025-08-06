@@ -22,7 +22,7 @@ export default function Simulation() {
     new Map()
   );
   const [data, setData] = useState<SimulationData[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [setError] = useState<string | null>(null);
   const toggleHistory = () => setHistoryVisible(!historyVisible);
   const [showMessageModal, setShowMessageModal] = useState(false);
   const [messageText, setMessageText] = useState("");

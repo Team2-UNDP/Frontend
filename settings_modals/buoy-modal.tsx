@@ -35,6 +35,9 @@ export default function BuoyModal({
     status?: string;
     battery_level?: number;
     locations?: BuoyLocation[];
+    installation_date?: string;
+    live_feed_link?: string;
+
   }
 
   useEffect(() => {
@@ -72,7 +75,7 @@ export default function BuoyModal({
     e.preventDefault();
 
     const formData = new FormData(e.target as HTMLFormElement);
-    const baseData = {
+    const baseData: Buoy =  {
       name: formData.get("name") as string,
       status: formData.get("status") as string,
       live_feed_link: formData.get("feedback") as string,

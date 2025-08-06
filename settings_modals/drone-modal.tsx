@@ -28,7 +28,7 @@ export default function DroneModal({
   };
 
   interface DroneData {
-    _id: string;
+    _id?: string;
     name?: string;
     installation_date?: string;
     last_maintenance?: string;
@@ -38,6 +38,7 @@ export default function DroneModal({
     locations?: Location[];
     last_charged?: string;
     is_deleted?: boolean;
+    
   }
 
   useEffect(() => {
@@ -89,7 +90,7 @@ export default function DroneModal({
     e.preventDefault();
 
     const formData = new FormData(e.target as HTMLFormElement);
-    const baseData = {
+    const baseData: DroneData = {
       name: formData.get("name") as string,
       status: formData.get("status") as string,
       live_feed_link: formData.get("feedback") as string,
