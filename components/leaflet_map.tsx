@@ -32,7 +32,6 @@ const LeafletMap: React.FC<LeafletMapProps> = ({ center, zoom, markers, mapKey }
     const [selectedBuoy, setSelectedBuoy] = useState<MarkerData | null>(null);
     
     useEffect(() => {
-    let mapInstance: Map;
 
     const setupMapAndMarkers = async () => {
         const L = (await import("leaflet")).default;

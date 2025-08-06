@@ -72,8 +72,8 @@ export default function Home() {
       <Head>
         <title>WasteWatch Login</title>
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <Script src="https://cdn.tailwindcss.com" strategy="afterInteractive"/>
       </Head>
+      <Script src="https://cdn.tailwindcss.com" strategy="afterInteractive"/>
       <main className="font-poppins min-h-screen flex items-center justify-center text-white bg-[url('/images/bg-image.png')] bg-[length:100%_100%] bg-no-repeat bg-center">
         <div className="text-center mt-16">
           <img
