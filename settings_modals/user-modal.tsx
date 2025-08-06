@@ -16,12 +16,19 @@ export default function UserModal({
   const [activeSection, setActiveSection] = useState<
     "info" | "add" | "edit" | "delete"
   >("info");
-  const [userInfo, setUserInfo] = useState<any>(null); // Added userInfo state
+  const [userInfo, setUserInfo] = useState<UserInfo | null>(null); // Added userInfo state
   const [isFormValid, setIsFormValid] = useState<boolean>(false); // Added isFormValid state
   const formRef = useRef<HTMLFormElement | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [showMessageModal, setShowMessageModal] = useState(false);
   const [messageText, setMessageText] = useState("");
+  interface UserInfo {
+    id: string;
+    name: string;
+    email: string;
+    role?: string;
+    created_at?: string;
+  }
 
   useEffect(() => {
     if (typeof window !== "undefined") {

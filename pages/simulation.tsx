@@ -3,9 +3,11 @@ import React, { useRef, useState, useEffect } from "react";
 import Header from "@/components/header";
 import Image from "next/image";
 import MessageModal from "@/components/message-modal";
+import { Map } from "leaflet"; // Import Map type from leaflet
+
  // Adjust the import path as necessary
 export default function Simulation() {
-  const [mapInstance, setMapInstance] = useState<any>(null);
+  const [mapInstance, setMapInstance] = useState<Map>(null);
   const [coordinatesList, setCoordinatesList] = useState<[number, number][]>(
     []
   );

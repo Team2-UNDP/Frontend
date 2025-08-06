@@ -17,12 +17,26 @@ export default function BuoyModal({
   >("info");
     const [buoys, setBuoys] = useState([]);
   const [selectedBuoy, setSelectedBuoy] = useState<string>("");
-  const [buoyData, setBuoyData] = useState<any>(null);
+  const [buoyData, setBuoyData] = useState<Buoy>();
   const [refreshBuoys, setRefreshBuoys] = useState(false);
   const [buoyId, setBuoyId] = useState<string>("");
   const router = useRouter();
   const [showMessageModal, setShowMessageModal] = useState(false);
   const [messageText, setMessageText] = useState("");
+
+  interface BuoyLocation {
+    lat: number;
+    long: number;
+    date: string; // or Date if you parse it
+  }
+
+  interface Buoy {
+    id?: string;
+    name?: string;
+    status?: string;
+    battery_level?: number;
+    locations?: BuoyLocation[];
+  }
 
   useEffect(() => {
     const fetchBuoyData = async () => {

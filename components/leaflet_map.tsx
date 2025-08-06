@@ -3,7 +3,7 @@ import "leaflet/dist/leaflet.css";
 import BuoyDetailsModal from "./buoy-detail-modal";
 import { createRoot } from "react-dom/client";
 import router from "next/router";
-
+import { Map } from "leaflet";
 interface MarkerData {
     lat: number;
     long: number;
@@ -28,11 +28,11 @@ interface LeafletMapProps {
 
 const LeafletMap: React.FC<LeafletMapProps> = ({ center, zoom, markers, mapKey }) => {
     const mapRef = useRef<HTMLDivElement>(null);
-    const mapInstanceRef = useRef<any>(null);
+    const mapInstanceRef = useRef<Map | null>(null);
     const [selectedBuoy, setSelectedBuoy] = useState<MarkerData | null>(null);
     
     useEffect(() => {
-    let mapInstance: any;
+    let mapInstance: Map;
 
     const setupMapAndMarkers = async () => {
         const L = (await import("leaflet")).default;

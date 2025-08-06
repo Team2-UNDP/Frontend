@@ -14,12 +14,28 @@ export default function DroneModal({
   const [activeSection, setActiveSection] = useState<"info" | "add" | "edit" | "delete">("info");
   const [drones, setDrones] = useState([]);
   const [selectedDrone, setSelectedDrone] = useState<string>("");
-  const [droneData, setDroneData] = useState<any>(null);
+  const [droneData, setDroneData] = useState<DroneData | null>(null);
   const [refreshDrones, setRefreshDrones] = useState(false);
   const [droneId, setDroneId] = useState<string>("");
   const [showMessageModal, setShowMessageModal] = useState(false);
   const [messageText, setMessageText] = useState("");
   const router = useRouter();
+  interface DroneData {
+    _id: string;
+    name?: string;
+    installation_date?: string;
+    last_maintenance?: string;
+    status?: string;
+    battery_level?: number;
+    live_feed_link?: string;
+    locations?: {
+      lat: number;
+      long: number;
+      date: string;
+    }[];
+    last_charged?: string;
+    is_deleted?: boolean;
+  }
 
   useEffect(() => {
     const fetchDroneData = async () => {
@@ -31,7 +47,7 @@ export default function DroneModal({
 
         if (res.ok) {
           const { data } = await res.json();
-          const filtered = data.filter((drone: any) => !drone.is_deleted);
+          const filtered = data.filter((drone: DroneData) => !drone.is_deleted);
           setDrones(filtered);
           if (filtered.length > 0) {
             setSelectedDrone(filtered[0].name);
