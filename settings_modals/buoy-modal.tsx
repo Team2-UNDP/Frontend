@@ -2,7 +2,6 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/router";
-import { json } from "stream/consumers";
 import MessageModal from "../components/message-modal"; // Adjust the import path as necessary
 
 export default function BuoyModal({
@@ -14,9 +13,9 @@ export default function BuoyModal({
 }) {
   type SectionType = "info" | "add" | "edit" | "delete";
   const [activeSection, setActiveSection] = useState<SectionType>("info");
-  const [buoys, setBuoys] = useState([]);
+  const [buoys, setBuoys] = useState<Buoy[]>([]);
   const [selectedBuoy, setSelectedBuoy] = useState<string>("");
-  const [buoyData, setBuoyData] = useState<Buoy>();
+  const [buoyData, setBuoyData] = useState<Buoy | null>(null);
   const [refreshBuoys, setRefreshBuoys] = useState(false);
   const [buoyId, setBuoyId] = useState<string>("");
   const router = useRouter();
@@ -30,7 +29,9 @@ export default function BuoyModal({
   }
 
   interface Buoy {
-    id?: string;
+    last_charged: string | number | Date;
+    last_maintenance: string | number | Date;
+    _id?: string;
     name?: string;
     status?: string;
     battery_level?: number;
@@ -79,6 +80,8 @@ export default function BuoyModal({
       name: formData.get("name") as string,
       status: formData.get("status") as string,
       live_feed_link: formData.get("feedback") as string,
+      last_charged: "",
+      last_maintenance: ""
     };
 
     if (!baseData.name || !baseData.status || !baseData.live_feed_link) {
@@ -199,7 +202,7 @@ export default function BuoyModal({
         <div className="w-1/3 pr-6 border-r-2 border-black">
           <h2 className="text-xl font-bold mb-4">Buoy</h2>
           <ul className="space-y-4 text-black">
-            {["info", "add", "edit", "delete"].map((section) => {
+            {(["info", "add", "edit", "delete"] as const).map((section) => {
               const labels: Record<string, string> = {
                 info: "Information",
                 add: "Add Buoy",
@@ -265,7 +268,7 @@ export default function BuoyModal({
                     <strong>Status:</strong> {buoyData.status || "N/A"}
                   </p>
                   <p>
-                    <strong>Date Installed:</strong> {new Date(buoyData.installation_date).toLocaleDateString() || "N/A"}
+                    <strong>Date Installed:</strong> {new Date(buoyData.installation_date ?? "").toLocaleDateString() || "N/A"}
                   </p>
                   <p>
                     <strong>Last Maintenance:</strong> {new Date(buoyData.last_maintenance).toLocaleDateString() || "N/A"}
@@ -334,10 +337,11 @@ export default function BuoyModal({
                   type="text"
                   value={buoyData?.name ?? ""}
                   onChange={(e) => {
-                    setBuoyData((prev) => ({
-                    ...prev,
-                    name: e.target.value,
-                    }));
+                    setBuoyData((prev) =>
+                      prev
+                        ? { ...prev, name: e.target.value }
+                        : null // or provide a fallback Buoy object if desired
+                    );
                   }}
                   className="flex-1 border border-black rounded px-2 py-1"
                   />
@@ -367,7 +371,7 @@ export default function BuoyModal({
                   <select
                     id="status"
                     name="status"
-                    defaultValue={activeSection === "edit" ? (buoyData.status === "Inactive" ? "Inactive" : "Active") : ""}
+                    defaultValue={activeSection === "edit" ? (buoyData?.status === "Inactive" ? "Inactive" : "Active") : ""}
                     className="flex-1 border border-black rounded px-2 py-1"
                   >
                     <option>Active</option>
@@ -384,10 +388,11 @@ export default function BuoyModal({
                     type="text"
                     value={buoyData?.live_feed_link ?? ""}
                     onChange={(e) =>
-                      setBuoyData((prev) => ({
-                        ...prev,
-                        live_feed_link: e.target.value,
-                      }))
+                      setBuoyData((prev) =>
+                        prev
+                        ? { ...prev, live_feed_link: e.target.value }
+                        : null
+                      )
                     }
                     className="flex-1 border border-black rounded px-2 py-1"
                   />

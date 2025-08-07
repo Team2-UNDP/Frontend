@@ -24,8 +24,11 @@ export default function UserModal({
   interface UserInfo {
     id: string;
     name: string;
+    username: string;
     email: string;
     role?: string;
+    is_admin?: boolean;
+    date_created?: string;
     created_at?: string;
   }
 
@@ -90,13 +93,13 @@ export default function UserModal({
       if (name && name !== userInfo?.name) updatedData.name = name;
       if (username && username !== userInfo?.username) updatedData.username = username;
       if (password) updatedData.password = password; // Send only if not empty
-      if (role !== userInfo?.is_admin) updatedData.is_admin = role;
+      if (role !== userInfo?.is_admin) updatedData.is_admin = role.toString();
     } else {
       // Add mode: include everything
       updatedData.name = name;
       updatedData.username = username;
       updatedData.password = password;
-      updatedData.is_admin = role;
+      updatedData.is_admin = role.toString();
     }
 
     // Prevent empty update
@@ -250,7 +253,7 @@ export default function UserModal({
                   className={`flex items-center gap-2 cursor-pointer font-semibold ${
                     activeSection === section ? "text-[#065C7C]" : ""
                   }`}
-                  onClick={() => setActiveSection(section)}
+                  onClick={() => setActiveSection(section as SectionType)}
                 >
                   <Image
                     src={icons[section]}

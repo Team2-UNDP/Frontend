@@ -12,7 +12,7 @@ export default function DroneModal({
   onClose: () => void;
 }) {
   const [activeSection, setActiveSection] = useState<"info" | "add" | "edit" | "delete">("info");
-  const [drones, setDrones] = useState([]);
+  const [drones, setDrones] = useState<DroneData[]>([]);
   const [selectedDrone, setSelectedDrone] = useState<string>("");
   const [droneData, setDroneData] = useState<DroneData | null>(null);
   const [refreshDrones, setRefreshDrones] = useState(false);
@@ -214,7 +214,7 @@ export default function DroneModal({
                   className={`flex items-center gap-2 cursor-pointer font-semibold ${
                     activeSection === section ? "text-[#065C7C]" : ""
                   }`}
-                  onClick={() => setActiveSection(section)}
+                  onClick={() => setActiveSection(section as "info" | "add" | "edit" | "delete")}
                 >
                   <Image
                     src={icons[section]}
