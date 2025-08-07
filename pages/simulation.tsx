@@ -3,22 +3,22 @@ import React, { useRef, useState, useEffect } from "react";
 import Header from "@/components/header";
 import Image from "next/image";
 import MessageModal from "@/components/message-modal";
-import { Map } from "leaflet"; // Import Map type from leaflet
-import { LeafletMouseEvent } from "leaflet";
+import { Map as LeafletMap} from "leaflet"; // Import Map type from leaflet
 import L from "leaflet";
 
  // Adjust the import path as necessary
 export default function Simulation() {
-  const [mapInstance, setMapInstance] = useState<Map | null>(null);
+  const [mapInstance, setMapInstance] = useState<LeafletMap | null>(null);
   const [coordinatesList, setCoordinatesList] = useState<[number, number][]>(
     []
   );
-  const [setHistoryList] = useState<[number, number][]>([]);
+  const [, setHistoryList] = useState<[number, number][]>([]);
   const [selectedDays, setSelectedDays] = useState<number | null>(null);
   const [hasSimulated, setHasSimulated] = useState(false);
   const [historyVisible, setHistoryVisible] = useState(false);
-  const mapRef = useRef<HTMLDivElement>(null);
-  const [pathsList, setPathsList] = useState<Map<string, [number, number][]>>(new Map());
+  const mapRef = useRef<HTMLDivElement | null>(null);
+  type PathMap = Map<string, [number, number][]>;
+  const [pathsList, setPathsList] = useState<PathMap>(new Map());
   const [data, setData] = useState<SimulationData[] | null>(null);
   const toggleHistory = () => setHistoryVisible(!historyVisible);
   const [showMessageModal, setShowMessageModal] = useState(false);
@@ -31,7 +31,8 @@ export default function Simulation() {
   }
 
   interface SimulationResponse {
-    path: Array<{ lat: number; lon: number; days: number; trajectory?: [number, number][][];}>;
+    path: Array<{ lat: number; lon: number; days: number;}>;
+    trajectory?: [number, number][][];
   }
 
   type SimulationData = {
@@ -75,21 +76,16 @@ export default function Simulation() {
     if (typeof window === "undefined" || !mapRef.current || mapInstance) return;
 
     const loadMap = async () => {
-      const L = (await import("leaflet")).default;
+      const L = (await import("leaflet"));
       await import("leaflet/dist/leaflet.css");
 
-      if ((mapRef.current as Map)._leaflet_id != null) return;
-
-      const map = L.map(mapRef.current as HTMLElement).setView(
-        [7.0806, 125.6476],
-        10
-      );
+      const map = L.map(mapRef.current!).setView([7.0806, 125.6476], 10);
 
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         attribution: "&copy; OpenStreetMap contributors",
       }).addTo(map);
 
-      map.on("click", (e: LeafletMouseEvent) => {
+      map.on("click", (e: L.LeafletMouseEvent) => {
         const { lat, lng } = e.latlng;
         setCoordinatesList((prev) => [...prev, [lat, lng]]);
         setHistoryList((prev) => [...prev, [lat, lng]]);
@@ -109,7 +105,8 @@ export default function Simulation() {
     };
 
     loadMap();
-  }, [mapRef, mapInstance]);
+  }, [mapRef, mapInstance, setHistoryList]);
+
 
   const simulatePaths = async () => {
     if (
@@ -152,15 +149,7 @@ export default function Simulation() {
 
       if (!pathCoords || pathCoords.length === 0) continue;
 
-      pathCoords.forEach(
-        (
-          particleTrajectory: {
-            map: (
-              arg0: ([lon, lat]: [number, number]) => number[]
-            ) => [number, number][];
-          },
-          index: number
-        ) => {
+      pathCoords.forEach((particleTrajectory, index) => {
         const latLngs: [number, number][] = particleTrajectory.map(
           ([lon, lat]: [number, number]) => [lat, lon]
         );
