@@ -4,6 +4,7 @@ import { useRouter } from "next/router";
 import { useEffect } from "react";
 import Modal from "../components/message-modal"; // Adjust the import path as necessary
 import Script from "next/script";
+import Image from "next/image";
 
 export default function Home() {
   const [username, setUsername] = useState("");
@@ -76,7 +77,7 @@ export default function Home() {
       <Script src="https://cdn.tailwindcss.com" strategy="afterInteractive"/>
       <main className="font-poppins min-h-screen flex items-center justify-center text-white bg-[url('/images/bg-image.png')] bg-[length:100%_100%] bg-no-repeat bg-center">
         <div className="text-center mt-16">
-          <img
+          <Image
             id="logo"
             src="/images/WebLogo.png"
             alt="WasteWatch Logo"
@@ -113,7 +114,7 @@ export default function Home() {
             </h2>
             <form onSubmit={handleSubmit}>
               <div className="mb-4 relative">
-                <img
+                <Image
                   src="/icons/username.png"
                   alt="User Icon"
                   className="absolute left-4 top-7.5 transform -translate-y-1/2 w-5 h-5"
@@ -130,7 +131,7 @@ export default function Home() {
               </div>
 
               <div className="mb-6 relative">
-                <img
+                <Image
                   src="/icons/password.png"
                   alt="Lock Icon"
                   className="absolute left-4 top-7.5 transform -translate-y-1/2 w-5 h-5"

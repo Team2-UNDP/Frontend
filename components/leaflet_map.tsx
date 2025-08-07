@@ -4,6 +4,7 @@ import BuoyDetailsModal from "./buoy-detail-modal";
 import { createRoot } from "react-dom/client";
 import router from "next/router";
 import { Map } from "leaflet";
+import Image from "next/image";
 interface MarkerData {
     lat: number;
     long: number;
@@ -64,7 +65,7 @@ const LeafletMap: React.FC<LeafletMapProps> = ({ center, zoom, markers, mapKey }
         const customIcon = L.divIcon({
             html: `
             <div class="custom-marker cursor-pointer">
-                <img src="${status === "Inactive" ? "/icons/Inactive.png" : "/icons/Active.png"}"
+                <Image src="${status === "Inactive" ? "/icons/Inactive.png" : "/icons/Active.png"}"
                     alt="${status === "Inactive" ? "Inactive Buoy" : `Buoy ${index + 1}`}"
                     width="32" height="32" />
             </div>
@@ -91,14 +92,14 @@ const LeafletMap: React.FC<LeafletMapProps> = ({ center, zoom, markers, mapKey }
                 id={`live-cam-${index}`}
                 className="flex items-center cursor-pointer hover:bg-gray-100 p-1 rounded-md"
             >
-                <img src="/icons/LiveCam.png" alt="Live Cam" width="20" height="20" className="mr-2" />
+                <Image src="/icons/LiveCam.png" alt="Live Cam" width="20" height="20" className="mr-2" />
                 <span>Live Cam</span>
             </div>
             <div
                 id={`details-${index}`}
                 className="flex items-center cursor-pointer hover:bg-gray-100 p-1 rounded-md"
             >
-                <img src="/icons/Details.png" alt="Details" width="16" height="16" className="mr-2" />
+                <Image src="/icons/Details.png" alt="Details" width="16" height="16" className="mr-2" />
                 <span>Details</span>
             </div>
             </div>
