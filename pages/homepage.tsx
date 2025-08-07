@@ -27,7 +27,7 @@ export default function WasteWatchDashboard() {
     lat: number;
     long: number;
     date: string; // or Date if you parse it
-  }
+  };
 
   interface Buoy {
     _id: string;
@@ -35,7 +35,11 @@ export default function WasteWatchDashboard() {
     status?: string;
     battery_level?: number;
     locations?: BuoyLocation[];
-  }
+    last_charged?: string;
+    installation_date?: string;
+    last_maintenance?: string;
+    live_feed_link?: string;
+  };
 
 
   type TrashCount = {
@@ -45,6 +49,7 @@ export default function WasteWatchDashboard() {
   };
 
   type Notification = {
+    read: any;
     _id: string;
     detection_type: string;
     buoy_id: string;
@@ -245,8 +250,8 @@ export default function WasteWatchDashboard() {
                   center={[7.0806, 125.6476]}
                   zoom={10}
                   markers={buoys.map((buoy) => ({
-                    lat: buoy.locations[buoy.locations.length - 1]?.lat || 0,
-                    long: buoy.locations[buoy.locations.length - 1]?.long || 0,
+                    lat: buoy.locations?.[buoy.locations.length - 1]?.lat || 0,
+                    long: buoy.locations?.[buoy.locations.length - 1]?.long || 0,
                     id: buoy._id,
                     name: buoy.name,
                     status: buoy.status,

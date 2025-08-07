@@ -18,9 +18,7 @@ export default function Simulation() {
   const [hasSimulated, setHasSimulated] = useState(false);
   const [historyVisible, setHistoryVisible] = useState(false);
   const mapRef = useRef<HTMLDivElement>(null);
-  const [pathsList, setPathsList] = useState<Map<string, [number, number][]>>(
-    new Map()
-  );
+  const [pathsList, setPathsList] = useState<Map<string, [number, number][]>>(new Map());
   const [data, setData] = useState<SimulationData[] | null>(null);
   const [setError] = useState<string | null>(null);
   const toggleHistory = () => setHistoryVisible(!historyVisible);
@@ -34,7 +32,7 @@ export default function Simulation() {
   }
 
   interface SimulationResponse {
-    path: Array<{ lat: number; lon: number; days: number}>;
+    path: Array<{ lat: number; lon: number; days: number; trajectory?: [number, number][][];}>;
   }
 
   type SimulationData = {
@@ -216,7 +214,6 @@ export default function Simulation() {
     } catch (error) {
       setMessageText(`Error saving simulation: ${error}`);
       setShowMessageModal(true);
-      setError((error as Error).message);
       console.error("Error saving simulation:", error);
     }
 
@@ -250,10 +247,9 @@ export default function Simulation() {
           setShowMessageModal(true);
           throw new Error(`Error: ${response.status}`);
         }
-        const result: SimulationData[] = await response.json();
+        const result = await response.json();
         setData(result.data);
       } catch (err) {
-        setError((err as Error).message);
         setMessageText(`Error fetching simulation data: ${(err as Error).message}`);
         setShowMessageModal(true);
       }

@@ -10,7 +10,7 @@ interface MarkerData {
     id?: string;
     name?: string;
     status?: string;
-    batteryLevel?: string;
+    batteryLevel?: number;
     lastCharged?: string;
     installationDate?: string;
     lastMaintenance?: string;
@@ -163,7 +163,7 @@ const LeafletMap: React.FC<LeafletMapProps> = ({ center, zoom, markers, mapKey }
                         long: selectedBuoy.long,
                         installationDate: selectedBuoy.installationDate || "",
                         lastMaintenance: selectedBuoy.lastMaintenance || "",
-                        battery: parseFloat(selectedBuoy.batteryLevel || "0"),
+                        battery: parseFloat(String(selectedBuoy.batteryLevel || "0")),
                         lastCharged: selectedBuoy.lastCharged || "",
                     }}
                 />

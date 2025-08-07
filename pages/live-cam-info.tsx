@@ -7,8 +7,41 @@ export default function LiveCam () {
 
   const [time, setTime] = useState("");
   const [date, setDate] = useState("");
-  const [buoyCam, setBuoyCam] = useState<string | null>(null);
-  const [notifications, setNotifications] = useState([]);
+  const [buoyCam, setBuoyCam] = useState<BuoyCam | null>(null);
+  const [notifications, setNotifications] = useState<Notification[] | null>(null);
+  interface BuoyLocation {
+    lat: number;
+    long: number;
+    date: string; // or Date if you parse it
+  };
+  interface BuoyCam  {
+    _id: string;
+    name: string;
+    status?: string;
+    battery_level?: number;
+    locations?: BuoyLocation[];
+    last_charged?: string;
+    installation_date?: string;
+    last_maintenance?: string;
+    live_feed_link?: string;
+  };
+  
+  type TrashCount = {
+    small_count: number;
+    medium_count: number;
+    heavy_count: number;
+  };
+
+  type Notification = {
+    read: any;
+    _id: string;
+    detection_type: string;
+    buoy_id: string;
+    timestamp: string;
+    trash_count: TrashCount[];
+    time_window: string;
+    last_detection_id: string | null;
+  };
 
   useEffect(() => {
     const updateTime = () => {
@@ -47,12 +80,12 @@ export default function LiveCam () {
 
   // 🔄 Fetch notifications for the selected buoy
   useEffect(() => {
-    if (!buoyCam?.id) return;
+    if (!buoyCam?._id) return;
 
     const fetchNotifications = async () => {
       try {
         const res = await fetch(
-          `${process.env.NEXT_PUBLIC_BACKEND}/notification/notification_buoy/${buoyCam.id}`
+          `${process.env.NEXT_PUBLIC_BACKEND}/notification/notification_buoy/${buoyCam._id}`
         );
         if (res.ok) {
           const data = await res.json();
@@ -107,7 +140,7 @@ export default function LiveCam () {
               <p>Time: {time}</p>
               <p>Resolution: 1080p</p>
               <p>Date: {date}</p>
-              <p>IP: {buoyCam?.address}</p>
+              <p>IP: {buoyCam?.live_feed_link}</p>
             </div>
           </div>
 
@@ -131,10 +164,10 @@ export default function LiveCam () {
 
             <div className="w-fit bg-[#FFFFFF] rounded-xl p-4 overflow-y-auto h-fit">
                   <div className="space-y-4">
-                    {notifications.length === 0 ? (
+                    {notifications?.length === 0 ? (
                       <p className="text-black text-sm">No recent detections found.</p>
                     ) : (
-                      notifications.map((notif) => (
+                      notifications?.map((notif) => (
                         <div
                           key={notif._id}
                           className="bg-[#E5ECF1] drop-shadow-md rounded-lg shadow p-3 flex flex-row"
