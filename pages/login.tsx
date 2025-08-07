@@ -77,12 +77,18 @@ export default function Home() {
       <Script src="https://cdn.tailwindcss.com" strategy="afterInteractive"/>
       <main className="font-poppins min-h-screen flex items-center justify-center text-white bg-[url('/images/bg-image.png')] bg-[length:100%_100%] bg-no-repeat bg-center">
         <div className="text-center mt-16">
-          <Image
-            id="logo"
-            src="/images/WebLogo.png"
-            alt="WasteWatch Logo"
-            className={`mx-auto mb-12 ${isModalOpen ? "logo-shrink" : ""}`}
-          />
+          <div className="flex justify-center">
+            <Image
+              id="logo"
+              src="/images/WebLogo.png"
+              alt="WasteWatch Logo"
+              width={400}
+              height={200}
+              priority
+              className={`${isModalOpen ? "logo-shrink" : ""} object-contain`}
+            />
+          </div>
+
           <button
             id="loginBtn"
             onClick={toggleLoginForm}
@@ -117,6 +123,8 @@ export default function Home() {
                 <Image
                   src="/icons/username.png"
                   alt="User Icon"
+                  width={20}
+                  height={20}
                   className="absolute left-4 top-7.5 transform -translate-y-1/2 w-5 h-5"
                 />
                 <input
@@ -134,6 +142,8 @@ export default function Home() {
                 <Image
                   src="/icons/password.png"
                   alt="Lock Icon"
+                  width={20}
+                  height={20}
                   className="absolute left-4 top-7.5 transform -translate-y-1/2 w-5 h-5"
                 />
                 <input
