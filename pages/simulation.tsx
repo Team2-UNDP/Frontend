@@ -20,7 +20,6 @@ export default function Simulation() {
   const mapRef = useRef<HTMLDivElement>(null);
   const [pathsList, setPathsList] = useState<Map<string, [number, number][]>>(new Map());
   const [data, setData] = useState<SimulationData[] | null>(null);
-  const [setError] = useState<string | null>(null);
   const toggleHistory = () => setHistoryVisible(!historyVisible);
   const [showMessageModal, setShowMessageModal] = useState(false);
   const [messageText, setMessageText] = useState("");

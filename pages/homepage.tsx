@@ -49,7 +49,7 @@ export default function WasteWatchDashboard() {
   };
 
   type Notification = {
-    read: any;
+    read: boolean;
     _id: string;
     detection_type: string;
     buoy_id: string;
